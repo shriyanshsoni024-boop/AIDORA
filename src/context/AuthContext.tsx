@@ -78,11 +78,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentPath, setCurrentPath] = useState<string>(getInitialPath);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Initial session starts unauthenticated until verified with Supabase
+  // Initial session starts from cached storage or unauthenticated
   const [session, setSession] = useState<AuthSession>(() => {
     const cached = storageService.getItem<AuthSession | null>(STORAGE_KEYS.AUTH_SESSION, null);
-    if (cached && cached.isAuthenticated && cached.user && cached.token && !cached.token.startsWith('sahyog_demo')) {
-      return cached;
+    if (cached && cached.isAuthenticated && cached.user) {
+      if (!cached.expiresAt || Date.now() < cached.expiresAt) {
+        return cached;
+      }
     }
     return {
       isAuthenticated: false,
@@ -116,9 +118,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const authConfig = getAuthConfigStatus();
   const authMode = authConfig.mode;
 
-  // Hydrate Supabase session on mount and synchronize with real Auth state
+  // Hydrate session on mount and synchronize
   useEffect(() => {
+    const cached = storageService.getItem<AuthSession | null>(STORAGE_KEYS.AUTH_SESSION, null);
+
     if (!isSupabaseConfigured()) {
+      if (cached && cached.isAuthenticated && cached.user) {
+        setSession(cached);
+      }
       setIsLoading(false);
       return;
     }
@@ -187,21 +194,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           sbSession.expires_at
         );
       } else {
-        setSession({
-          isAuthenticated: false,
-          role: 'customer',
-          user: null,
-        });
-        storageService.removeItem(STORAGE_KEYS.AUTH_SESSION);
+        // If there is an existing valid local demo session, keep it
+        if (cached && cached.isAuthenticated && cached.user) {
+          setSession(cached);
+        } else {
+          setSession({
+            isAuthenticated: false,
+            role: 'customer',
+            user: null,
+          });
+          storageService.removeItem(STORAGE_KEYS.AUTH_SESSION);
+        }
       }
       setIsLoading(false);
     }).catch(() => {
+      if (cached && cached.isAuthenticated && cached.user) {
+        setSession(cached);
+      }
       setIsLoading(false);
     });
 
     // 2. Realtime Auth State Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sbSession) => {
-      if (event === 'SIGNED_OUT' || !sbSession) {
+      if (event === 'SIGNED_OUT') {
         setSession({
           isAuthenticated: false,
           role: 'customer',
@@ -209,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         storageService.removeItem(STORAGE_KEYS.AUTH_SESSION);
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        if (sbSession.user) {
+        if (sbSession?.user) {
           await loadProfileFromSupabase(
             sbSession.user.id,
             sbSession.access_token,
@@ -230,102 +245,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // =========================================================================
 
   const sendPhoneOtp = async (dto: PhoneOtpSendDto): Promise<{ success: boolean; message?: string; error?: string }> => {
-    setIsLoading(true);
-    try {
-      return await authService.sendPhoneOtp(dto);
-    } finally {
-      setIsLoading(false);
-    }
+    return await authService.sendPhoneOtp(dto);
   };
 
   const verifyPhoneOtp = async (dto: PhoneOtpVerifyDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.verifyPhoneOtp(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        if (dto.role === 'worker') {
-          navigate('/worker/home');
-        } else if (dto.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else {
-          navigate('/customer/home');
-        }
+    const res = await authService.verifyPhoneOtp(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      if (dto.role === 'worker') {
+        navigate('/worker/home');
+      } else if (dto.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/customer/home');
       }
-      return res;
-    } finally {
-      setIsLoading(false);
     }
+    return res;
   };
 
   const loginCustomer = async (dto: CustomerLoginDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.loginCustomer(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        navigate('/customer/home');
-      }
-      return res;
-    } finally {
-      setIsLoading(false);
+    const res = await authService.loginCustomer(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      navigate('/customer/home');
     }
+    return res;
   };
 
   const registerCustomer = async (dto: CustomerRegisterDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.registerCustomer(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        navigate('/customer/home');
-      }
-      return res;
-    } finally {
-      setIsLoading(false);
+    const res = await authService.registerCustomer(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      navigate('/customer/home');
     }
+    return res;
   };
 
   const loginWorker = async (dto: WorkerLoginDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.loginWorker(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        navigate('/worker/home');
-      }
-      return res;
-    } finally {
-      setIsLoading(false);
+    const res = await authService.loginWorker(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      navigate('/worker/home');
     }
+    return res;
   };
 
   const registerWorker = async (dto: WorkerRegisterDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.registerWorker(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        navigate('/worker/home');
-      }
-      return res;
-    } finally {
-      setIsLoading(false);
+    const res = await authService.registerWorker(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      navigate('/worker/home');
     }
+    return res;
   };
 
   const loginAdmin = async (dto: AdminLoginDto): Promise<AuthResponse> => {
-    setIsLoading(true);
-    try {
-      const res = await authService.loginAdmin(dto);
-      if (res.success && res.session) {
-        setSession(res.session);
-        navigate('/admin/dashboard');
-      }
-      return res;
-    } finally {
-      setIsLoading(false);
+    const res = await authService.loginAdmin(dto);
+    if (res.success && res.session) {
+      setSession(res.session);
+      navigate('/admin/dashboard');
     }
+    return res;
   };
 
   // Unified login helper

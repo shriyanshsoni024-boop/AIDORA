@@ -1,8 +1,30 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '../types/database';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const getEnv = (key: string): string | undefined => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    return (import.meta as any).env[key];
+  }
+  const proc = (globalThis as any).process;
+  if (typeof proc !== 'undefined' && proc.env) {
+    return proc.env[key];
+  }
+  return undefined;
+};
+
+const isDevEnv = (): boolean => {
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    return Boolean((import.meta as any).env.DEV);
+  }
+  const proc = (globalThis as any).process;
+  if (typeof proc !== 'undefined' && proc.env) {
+    return proc.env.NODE_ENV !== 'production';
+  }
+  return true;
+};
+
+const supabaseUrl = getEnv('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
 const isValidUrl = (url?: string): boolean => {
   if (!url) return false;
@@ -14,10 +36,17 @@ const isValidUrl = (url?: string): boolean => {
   }
 };
 
+const DEFAULT_LOCAL_SUPABASE_URL = 'http://127.0.0.1:54321';
+const DEFAULT_LOCAL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDkyOTk4MDAsImV4cCI6MjAwNDg3NTgwMH0.xxx';
+
 /**
  * Checks if real Supabase credentials have been configured
  */
 export const isSupabaseConfigured = (): boolean => {
+  if (isDevEnv()) {
+    const devUrl = supabaseUrl || DEFAULT_LOCAL_SUPABASE_URL;
+    return Boolean(devUrl && isValidUrl(devUrl));
+  }
   return Boolean(
     supabaseUrl &&
     supabaseAnonKey &&
@@ -38,12 +67,13 @@ export interface AuthConfigStatus {
 
 export const getAuthConfigStatus = (): AuthConfigStatus => {
   const configured = isSupabaseConfigured();
-  const isProd = import.meta.env.PROD;
+  const isProd = !isDevEnv();
 
   if (configured) {
+    const activeUrl = supabaseUrl || (isDevEnv() ? DEFAULT_LOCAL_SUPABASE_URL : '');
     const isLocal = Boolean(
-      supabaseUrl &&
-      (supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1'))
+      activeUrl &&
+      (activeUrl.includes('localhost') || activeUrl.includes('127.0.0.1'))
     );
     return {
       isConfigured: true,
@@ -111,9 +141,14 @@ export const isValidIndianMobile = (phone: string): boolean => {
   return false;
 };
 
-// Fallback dummy client values for zero-config demo / development mode
-const effectiveUrl = isValidUrl(supabaseUrl) ? (supabaseUrl as string) : 'https://placeholder.supabase.co';
-const effectiveKey = supabaseAnonKey && supabaseAnonKey !== 'your-anon-key-here' ? supabaseAnonKey : 'placeholder-anon-key';
+// Effective client credentials (uses local defaults in dev mode, strict config in prod)
+const effectiveUrl = isValidUrl(supabaseUrl)
+  ? (supabaseUrl as string)
+  : (isDevEnv() ? DEFAULT_LOCAL_SUPABASE_URL : 'https://placeholder.supabase.co');
+
+const effectiveKey = (supabaseAnonKey && supabaseAnonKey !== 'your-anon-key-here')
+  ? supabaseAnonKey
+  : (isDevEnv() ? DEFAULT_LOCAL_ANON_KEY : 'placeholder-anon-key');
 
 /**
  * Typed Supabase Client instance with session persistence

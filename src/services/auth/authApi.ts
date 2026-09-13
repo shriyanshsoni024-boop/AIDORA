@@ -17,123 +17,116 @@ import { STORAGE_KEYS } from '../storage/storageKeys';
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days default fallback expiry
 
+export const FIXED_DEMO_OTP = '123456';
+
 class AuthApiClient {
   /**
-   * Send Phone OTP via Supabase Auth
+   * Send Phone OTP (Demo Fake OTP Mode)
    */
   public async sendPhoneOtp(dto: PhoneOtpSendDto): Promise<{ success: boolean; message?: string; error?: string }> {
-    const e164Phone = formatIndianPhoneToE164(dto.phone);
+    const cleanPhone = dto.phone.trim().replace(/\D/g, '');
 
-    if (!isValidIndianMobile(dto.phone)) {
+    if (!isValidIndianMobile(cleanPhone)) {
       return { success: false, error: 'Please enter a valid 10-digit Indian mobile number.' };
     }
 
-    if (!isSupabaseConfigured()) {
-      return {
-        success: false,
-        error: 'Authentication Error: Supabase is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.',
-      };
-    }
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: e164Phone,
-        options: {
-          channel: 'sms',
-        },
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, message: `Verification code sent to ${e164Phone}` };
-    } catch (err: any) {
-      return { success: false, error: err?.message || 'Failed to send SMS OTP via Supabase Auth.' };
-    }
+    // Demo Mode: Do not send real SMS, return fixed demo OTP message
+    return {
+      success: true,
+      message: `Demo OTP: ${FIXED_DEMO_OTP}`,
+    };
   }
 
   /**
-   * Verify Phone OTP via Supabase Auth
+   * Verify Phone OTP (Demo Fake OTP Mode)
    */
   public async verifyPhoneOtp(dto: PhoneOtpVerifyDto): Promise<AuthResponse> {
-    const e164Phone = formatIndianPhoneToE164(dto.phone);
+    const cleanPhone = dto.phone.trim().replace(/\D/g, '');
     const otpToken = dto.token.trim();
+
+    if (!cleanPhone || !isValidIndianMobile(cleanPhone)) {
+      return { success: false, error: 'Please enter a valid 10-digit mobile number.' };
+    }
 
     if (!otpToken) {
       return { success: false, error: 'Please enter the verification OTP.' };
     }
 
-    if (!isSupabaseConfigured()) {
-      return {
-        success: false,
-        error: 'Authentication Error: Supabase is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.',
-      };
+    // Exact check for Demo OTP
+    if (otpToken !== FIXED_DEMO_OTP) {
+      return { success: false, error: 'Invalid OTP' };
     }
 
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: e164Phone,
-        token: otpToken,
-        type: 'sms',
-      });
-
-      if (error || !data.user) {
-        return { success: false, error: error?.message || 'Invalid or expired verification code.' };
-      }
-
-      // 1. Fetch or create profile in Supabase public.profiles
-      const authUserId = data.user.id;
-      const profile = await this.fetchOrCreateProfile(authUserId, {
-        role: dto.role,
-        name: dto.name || data.user.user_metadata?.name || 'SAHYOG User',
-        phone: e164Phone,
-        email: dto.email || data.user.email || undefined,
-        city: dto.locality || 'Noida',
-      });
-
-      // 2. If worker, ensure worker profile exists in public.workers
-      let workerRecord: any = null;
-      if (dto.role === 'worker') {
-        workerRecord = await this.ensureWorkerProfile(authUserId, {
-          name: dto.name || profile.name || 'Artisan Partner',
-          phone: e164Phone,
-          professions: dto.profession ? [dto.profession] : ['Electrician'],
-          skills: dto.skills || (dto.profession ? [dto.profession] : ['General Repairs']),
-          experienceYears: dto.experienceYears || 5,
-          cooperativeName: dto.cooperativeBranch || 'Noida District Artisan Federation',
-          zone: dto.locality || 'Noida Sector 62',
-          availability: dto.availability || 'AVAILABLE',
-        });
-      }
-
-      const userRole: Role = (profile.role === 'cooperative' ? 'admin' : profile.role) as Role;
+      const userRole: Role = (dto.role === 'worker' ? 'worker' : 'customer') as Role;
+      const authUserId = `usr_demo_${cleanPhone.slice(-6)}`;
+      const formattedPhone = formatIndianPhoneToE164(cleanPhone);
 
       const authUser: AuthUser = {
-        id: profile.id,
-        name: profile.name,
-        phone: profile.phone,
-        email: profile.email || undefined,
+        id: authUserId,
+        name: dto.name?.trim() || (userRole === 'worker' ? 'Artisan Partner' : 'SAHYOG Customer'),
+        phone: cleanPhone,
+        email: dto.email?.trim() || undefined,
         role: userRole,
-        verificationStatus: (workerRecord?.verification_status || 'VERIFIED') as any,
-        createdAt: profile.created_at || new Date().toISOString(),
-        profession: workerRecord?.trade || dto.profession,
-        cooperativeBranch: workerRecord?.cooperative_branch || dto.cooperativeBranch,
-        experienceYears: workerRecord?.experience_years || dto.experienceYears,
-        zone: workerRecord?.zone || profile.city,
-        avatar: workerRecord?.avatar || profile.avatar_url || undefined,
+        verificationStatus: 'VERIFIED',
+        createdAt: new Date().toISOString(),
+        city: dto.locality?.trim() || 'Noida',
+        zone: dto.locality?.trim() || 'Noida Sector 62',
+        profession: dto.profession || (userRole === 'worker' ? 'Electrician' : undefined),
+        cooperativeBranch: dto.cooperativeBranch || (userRole === 'worker' ? 'Noida District Artisan Federation' : undefined),
+        experienceYears: dto.experienceYears || (userRole === 'worker' ? 5 : undefined),
       };
 
       const session: AuthSession = {
         isAuthenticated: true,
         role: userRole,
         user: authUser,
-        token: data.session?.access_token,
-        refreshToken: data.session?.refresh_token,
-        expiresAt: data.session?.expires_at ? data.session.expires_at * 1000 : Date.now() + SESSION_DURATION_MS,
+        token: `sahyog_demo_token_${cleanPhone}`,
+        expiresAt: Date.now() + SESSION_DURATION_MS,
       };
 
+      // Persist auth session & current user
       storageService.setItem(STORAGE_KEYS.AUTH_SESSION, session);
+      storageService.setItem(STORAGE_KEYS.CURRENT_USER, {
+        id: authUser.id,
+        name: authUser.name,
+        phone: authUser.phone,
+        email: authUser.email,
+        role: authUser.role,
+        address: authUser.address || '',
+        city: authUser.city || 'Noida',
+        profileImage: authUser.avatar,
+        createdAt: authUser.createdAt,
+      });
+
+      // Best effort profile creation if Supabase DB is active
+      if (isSupabaseConfigured()) {
+        try {
+          await this.fetchOrCreateProfile(authUserId, {
+            role: userRole,
+            name: authUser.name,
+            phone: formattedPhone,
+            email: authUser.email,
+            city: authUser.city,
+          });
+
+          if (userRole === 'worker') {
+            await this.ensureWorkerProfile(authUserId, {
+              name: authUser.name,
+              phone: formattedPhone,
+              professions: dto.profession ? [dto.profession] : ['Electrician'],
+              skills: dto.skills || (dto.profession ? [dto.profession] : ['General Repairs']),
+              experienceYears: dto.experienceYears || 5,
+              cooperativeName: dto.cooperativeBranch || 'Noida District Artisan Federation',
+              zone: dto.locality || 'Noida Sector 62',
+              availability: dto.availability || 'AVAILABLE',
+            });
+          }
+        } catch (dbErr) {
+          console.warn('Demo profile DB sync note:', dbErr);
+        }
+      }
+
       return { success: true, session, user: authUser };
     } catch (err: any) {
       return { success: false, error: err?.message || 'OTP verification failed.' };

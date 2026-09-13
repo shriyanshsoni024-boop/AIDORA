@@ -311,7 +311,7 @@ export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ onCont
             </span>
           )}
 
-          {/* Continue Button */}
+          {/* Send OTP Button */}
           <button
             type="submit"
             disabled={!isValidPhone}
@@ -334,7 +334,7 @@ export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ onCont
             }}
             className={isValidPhone ? 'sahyog-btn' : ''}
           >
-            <span>Continue</span>
+            <span>Send OTP</span>
             <ArrowRight size={18} strokeWidth={2.5} />
           </button>
 

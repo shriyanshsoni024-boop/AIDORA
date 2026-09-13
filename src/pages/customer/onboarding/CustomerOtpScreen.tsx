@@ -73,8 +73,8 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
   };
 
   const handleCompleteOtp = async (code: string) => {
-    if (code.length < 6) {
-      setErrorMsg('Please enter a valid 6-digit OTP code.');
+    if (!code) {
+      setErrorMsg('Please enter the verification OTP.');
       return;
     }
 
@@ -91,10 +91,10 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
       if (res.success) {
         onVerified();
       } else {
-        setErrorMsg(res.error || 'Invalid or expired verification code.');
+        setErrorMsg(res.error || 'Invalid OTP');
       }
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Verification failed. Please try again.');
+    } catch {
+      setErrorMsg('Invalid OTP');
     } finally {
       setIsVerifying(false);
     }
@@ -109,8 +109,15 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
     try {
       await sendPhoneOtp({ phone });
     } catch {
-      setErrorMsg('Failed to resend SMS code.');
+      setErrorMsg('Failed to resend code.');
     }
+  };
+
+  const autoFillOtp = () => {
+    const demoDigits = ['1', '2', '3', '4', '5', '6'];
+    setOtp(demoDigits);
+    setErrorMsg(null);
+    handleCompleteOtp('123456');
   };
 
   const maskedPhone = phone.length >= 10
@@ -158,7 +165,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ marginBottom: '24px' }}>
+        <div style={{ marginBottom: '20px' }}>
           <h2
             style={{
               fontSize: '1.375rem',
@@ -173,6 +180,46 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
           <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#1DAA5C' }}>
             {maskedPhone}
           </div>
+        </div>
+
+        {/* Demo OTP Helper Banner */}
+        <div
+          style={{
+            padding: '12px 14px',
+            backgroundColor: '#F0FDF4',
+            border: '1.5px solid #86EFAC',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            marginBottom: '20px',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#14532D' }}>
+              Demo OTP: 123456
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#166534' }}>
+              Enter 123456 to continue
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={autoFillOtp}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#1DAA5C',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Auto Fill
+          </button>
         </div>
 
         {/* 6 OTP Input Boxes */}
@@ -238,7 +285,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
           {countdown > 0 ? (
             <span style={{ fontSize: '0.8125rem', color: '#64748B', fontWeight: 600 }}>
-              Resend SMS in <strong style={{ color: '#0B0B0B' }}>{countdown}s</strong>
+              Resend code in <strong style={{ color: '#0B0B0B' }}>{countdown}s</strong>
             </span>
           ) : (
             <button
@@ -258,7 +305,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
               }}
             >
               <RefreshCw size={14} />
-              <span>Resend SMS</span>
+              <span>Resend Demo OTP</span>
             </button>
           )}
 

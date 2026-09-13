@@ -219,7 +219,7 @@ INSERT INTO public.kyc_records (
     id, worker_id, worker_name, profession, cooperative, documents, status, submitted_at
 ) VALUES
 (
-    'k0000000-0000-0000-0000-000000000001',
+    'c0000000-0000-0000-0000-000000000001',
     'e0000000-0000-0000-0000-000000000001',
     'Manish Verma',
     'Electrician',
@@ -229,7 +229,7 @@ INSERT INTO public.kyc_records (
     NOW() - INTERVAL '3 hours'
 ),
 (
-    'k0000000-0000-0000-0000-000000000002',
+    'c0000000-0000-0000-0000-000000000002',
     'e0000000-0000-0000-0000-000000000002',
     'Kavita Rao',
     'Appliance Repair',
@@ -245,7 +245,7 @@ INSERT INTO public.reviews (
     id, author_name, rating, comment, service_name, chips, created_at
 ) VALUES
 (
-    'r0000000-0000-0000-0000-000000000001',
+    'd0000000-0000-0000-0000-000000000001',
     'Deepak Sharma',
     5.0,
     'Arrived within 14 minutes for the short circuit issue. Clean work and fixed rate.',
@@ -254,7 +254,7 @@ INSERT INTO public.reviews (
     NOW() - INTERVAL '2 days'
 ),
 (
-    'r0000000-0000-0000-0000-000000000002',
+    'd0000000-0000-0000-0000-000000000002',
     'Meera Iyer',
     5.0,
     'Very professional AC jet servicing. No hidden costs or extra gas charges.',

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Lock, Mail, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react';
+import { Building2, Lock, Mail, Eye, EyeOff, ArrowRight, KeyRound, AlertCircle, MoreVertical } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
   const { login, navigate } = useAuth();
@@ -11,6 +11,24 @@ export const AdminLoginPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotNotice, setShowForgotNotice] = useState(false);
+
+  // Top-Right Three-Dot Menu State & Click-Outside Ref
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,88 +57,188 @@ export const AdminLoginPage: React.FC = () => {
     <div
       style={{
         minHeight: '100vh',
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '24px 16px',
-        backgroundColor: '#FCFBF4',
-        width: '100%',
+        backgroundColor: '#F8FAFC',
+        fontFamily: 'var(--font-sans)',
+        boxSizing: 'border-box',
       }}
     >
       <div
         style={{
           width: '100%',
-          maxWidth: '430px',
+          maxWidth: '410px',
           backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          border: '1px solid #E5E7EB',
-          boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.06)',
-          padding: '28px 24px',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02)',
+          padding: '32px 28px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
+          gap: '22px',
+          boxSizing: 'border-box',
+          position: 'relative',
         }}
       >
+        {/* Top-Right Three-Dot Menu */}
+        <div ref={menuRef} style={{ position: 'absolute', top: '18px', right: '18px', zIndex: 30 }}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              backgroundColor: menuOpen ? '#F1F5F9' : '#FFFFFF',
+              color: '#64748B',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+            }}
+            aria-label="Other Login Options"
+            aria-expanded={menuOpen}
+          >
+            <MoreVertical size={18} />
+          </button>
+
+          {/* Clean Modern Dropdown Menu */}
+          {menuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '38px',
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                padding: '6px',
+                minWidth: '220px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                zIndex: 50,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/worker/login');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#1E293B',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span>Worker Login</span>
+                <span style={{ color: '#1DAA5C', fontWeight: 700 }}>→</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/customer/login');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#1E293B',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span>Customer Login</span>
+                <span style={{ color: '#1DAA5C', fontWeight: 700 }}>→</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Brand Header */}
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div
             style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '10px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
               backgroundColor: '#1DAA5C',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(29, 170, 92, 0.25)',
               marginBottom: '12px',
             }}
           >
-            <Building2 size={26} strokeWidth={2.3} />
+            <Building2 size={26} strokeWidth={2.2} />
           </div>
 
           <h1
             style={{
-              fontSize: '1.375rem',
-              fontWeight: 900,
+              fontSize: '1.25rem',
+              fontWeight: 800,
               color: '#0B0B0B',
-              letterSpacing: '-0.03em',
-              margin: '0 0 4px',
+              letterSpacing: '-0.02em',
+              margin: '0 0 2px',
+              fontFamily: 'var(--font-display)',
             }}
           >
             SAHYOG
           </h1>
 
-          <div
+          <h2
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              marginBottom: '8px',
-              flexWrap: 'wrap',
+              fontSize: '0.9375rem',
+              fontWeight: 600,
+              color: '#334155',
+              margin: '0 0 6px',
             }}
           >
-            <div
-              style={{
-                fontSize: '0.625rem',
-                fontWeight: 800,
-                color: '#1DAA5C',
-                backgroundColor: '#F0FDF4',
-                border: '1px solid #D9E9C8',
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-              }}
-            >
-              FEDERATION OPERATIONS COMMAND
-            </div>
-          </div>
+            Cooperative Admin Login
+          </h2>
 
-          <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
+          <p
+            style={{
+              fontSize: '0.8125rem',
+              color: '#64748B',
+              margin: 0,
+              lineHeight: 1.45,
+            }}
+          >
             Central operations, artisan KYC verification & cooperative management
           </p>
         </div>
@@ -131,12 +249,13 @@ export const AdminLoginPage: React.FC = () => {
             padding: '8px 12px',
             backgroundColor: '#FEF9C3',
             border: '1px solid #FDE047',
-            borderRadius: '6px',
+            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            fontSize: '0.6875rem',
+            fontSize: '0.75rem',
             color: '#854D0E',
+            lineHeight: 1.4,
           }}
         >
           <KeyRound size={16} color="#854D0E" style={{ flexShrink: 0 }} />
@@ -148,17 +267,22 @@ export const AdminLoginPage: React.FC = () => {
         {/* Error Alert */}
         {errorMsg && (
           <div
+            role="alert"
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
               padding: '10px 12px',
               backgroundColor: '#FEF2F2',
               border: '1px solid #FECACA',
-              borderRadius: '6px',
-              fontSize: '0.75rem',
-              color: '#DC2626',
+              borderRadius: '8px',
+              fontSize: '0.8125rem',
+              color: '#B91C1C',
               lineHeight: 1.4,
             }}
           >
-            {errorMsg}
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{errorMsg}</span>
           </div>
         )}
 
@@ -168,10 +292,10 @@ export const AdminLoginPage: React.FC = () => {
             style={{
               padding: '10px 12px',
               backgroundColor: '#F0FDF4',
-              border: '1px solid #D9E9C8',
-              borderRadius: '6px',
+              border: '1px solid #BBF7D0',
+              borderRadius: '8px',
               fontSize: '0.75rem',
-              color: '#0F7A3E',
+              color: '#15803D',
               lineHeight: 1.4,
             }}
           >
@@ -182,43 +306,62 @@ export const AdminLoginPage: React.FC = () => {
         {/* ========================================================= */}
         {/* ADMIN SIGN IN FORM                                        */}
         {/* ========================================================= */}
-        <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#334155', marginBottom: '5px' }}>
+        <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label
+              htmlFor="admin-email"
+              style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: '#1E293B',
+              }}
+            >
               Federation Official Email / Officer ID
             </label>
             <div
+              className="sahyog-input-container"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 border: '1px solid #CBD5E1',
-                borderRadius: '6px',
-                padding: '9px 12px',
+                borderRadius: '10px',
                 backgroundColor: '#FFFFFF',
-                gap: '8px',
+                padding: '0 12px',
+                height: '46px',
+                boxSizing: 'border-box',
               }}
             >
-              <Mail size={16} color="#1DAA5C" />
+              <Mail size={16} color="#1DAA5C" style={{ flexShrink: 0, marginRight: '8px' }} />
               <input
+                id="admin-email"
                 type="email"
                 placeholder="e.g. operations@sahyog.coop"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 style={{
+                  flex: 1,
                   border: 'none',
                   outline: 'none',
-                  width: '100%',
                   fontSize: '0.875rem',
-                  color: '#0B0B0B',
+                  color: '#0F172A',
+                  backgroundColor: 'transparent',
+                  height: '100%',
                 }}
                 required
               />
             </div>
           </div>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label
+                htmlFor="admin-password"
+                style={{
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: '#1E293B',
+                }}
+              >
                 Administrative Security Password
               </label>
               <button
@@ -227,7 +370,7 @@ export const AdminLoginPage: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  fontSize: '0.6875rem',
+                  fontSize: '0.75rem',
                   fontWeight: 600,
                   color: '#1DAA5C',
                   cursor: 'pointer',
@@ -239,35 +382,48 @@ export const AdminLoginPage: React.FC = () => {
             </div>
 
             <div
+              className="sahyog-input-container"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 border: '1px solid #CBD5E1',
-                borderRadius: '6px',
-                padding: '9px 12px',
+                borderRadius: '10px',
                 backgroundColor: '#FFFFFF',
-                gap: '8px',
+                padding: '0 12px',
+                height: '46px',
+                boxSizing: 'border-box',
               }}
             >
-              <Lock size={16} color="#1DAA5C" />
+              <Lock size={16} color="#1DAA5C" style={{ flexShrink: 0, marginRight: '8px' }} />
               <input
+                id="admin-password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter admin security password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 style={{
+                  flex: 1,
                   border: 'none',
                   outline: 'none',
-                  width: '100%',
                   fontSize: '0.875rem',
-                  color: '#0B0B0B',
+                  color: '#0F172A',
+                  backgroundColor: 'transparent',
+                  height: '100%',
                 }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', display: 'flex' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '4px',
+                }}
                 aria-label="Toggle password visibility"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -279,76 +435,28 @@ export const AdminLoginPage: React.FC = () => {
             type="submit"
             disabled={isSubmitting}
             style={{
-              marginTop: '6px',
-              padding: '11px',
+              marginTop: '4px',
+              height: '46px',
               backgroundColor: '#1DAA5C',
               color: '#FFFFFF',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '10px',
               fontSize: '0.875rem',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: isSubmitting ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 2px 6px rgba(29, 170, 92, 0.25)',
               opacity: isSubmitting ? 0.7 : 1,
+              transition: 'background-color 150ms ease, opacity 150ms ease, transform 100ms ease',
             }}
             className="sahyog-btn"
           >
             <span>{isSubmitting ? 'Verifying Credentials...' : 'Sign In to Operations Command'}</span>
-            <ArrowRight size={16} />
+            {!isSubmitting && <ArrowRight size={16} />}
           </button>
         </form>
-
-        {/* Cross-Role Navigation Links */}
-        <div
-          style={{
-            borderTop: '1px solid #F1F5F9',
-            paddingTop: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-            Looking for customer marketplace?{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/customer/login')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1DAA5C',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              Customer Login
-            </button>
-          </div>
-
-          <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-            Are you a service artisan?{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/worker/login')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1DAA5C',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              Artisan Pro Login
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

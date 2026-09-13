@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ArrowRight, ArrowLeft, MapPin, Briefcase, Award, Clock, RefreshCw, Edit2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ArrowLeft, MapPin, Briefcase, Award, Clock, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
 import { isValidIndianMobile } from '../../lib/supabase';
 import { DEFAULT_LOCATION } from '../../data/locations';
 
@@ -61,6 +61,24 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Top-Right Three-Dot Menu State & Click-Outside Ref
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   // Sync state if currentPath changes externally
   useEffect(() => {
@@ -134,7 +152,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
     try {
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || `Verification code sent to +91 ${cleanPhone}`);
+        setSuccessMsg(res.message || 'Demo OTP: 123456');
         setAuthStep('OTP');
         setCountdown(45);
         setCanResend(false);
@@ -181,7 +199,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
     try {
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || `Verification code sent to +91 ${cleanPhone}`);
+        setSuccessMsg(res.message || 'Demo OTP: 123456');
         setAuthStep('OTP');
         setCountdown(45);
         setCanResend(false);
@@ -201,8 +219,8 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
     setErrorMsg(null);
 
     const token = otpCode.trim();
-    if (!token || token.length < 4) {
-      setErrorMsg('Please enter a valid verification code.');
+    if (!token) {
+      setErrorMsg('Please enter the verification OTP.');
       return;
     }
 
@@ -228,10 +246,10 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
       });
 
       if (!res.success) {
-        setErrorMsg(res.error || 'Invalid code. Please check and retry.');
+        setErrorMsg(res.error || 'Invalid OTP');
       }
     } catch {
-      setErrorMsg('Verification failed. Please try again.');
+      setErrorMsg('Invalid OTP');
     } finally {
       setIsSubmitting(false);
     }
@@ -246,7 +264,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
       const cleanPhone = phone.trim().replace(/\D/g, '');
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(`New code sent to +91 ${cleanPhone}`);
+        setSuccessMsg(res.message || 'Demo OTP: 123456');
         setCountdown(45);
         setCanResend(false);
       } else {
@@ -287,8 +305,114 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
           flexDirection: 'column',
           gap: '22px',
           boxSizing: 'border-box',
+          position: 'relative',
         }}
       >
+        {/* Top-Right Three-Dot Menu */}
+        <div ref={menuRef} style={{ position: 'absolute', top: '18px', right: '18px', zIndex: 30 }}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              backgroundColor: menuOpen ? '#F1F5F9' : '#FFFFFF',
+              color: '#64748B',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+            }}
+            aria-label="Other Login Options"
+            aria-expanded={menuOpen}
+          >
+            <MoreVertical size={18} />
+          </button>
+
+          {/* Clean Modern Dropdown Menu */}
+          {menuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '38px',
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                padding: '6px',
+                minWidth: '220px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '2px',
+                zIndex: 50,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/customer/login');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#1E293B',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span>Customer Login</span>
+                <span style={{ color: '#1DAA5C', fontWeight: 700 }}>→</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/admin/login');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#1E293B',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span>Cooperative Admin Login</span>
+                <span style={{ color: '#475569', fontWeight: 700 }}>→</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Brand Header */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
           <div
@@ -527,7 +651,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                 }}
                 className="sahyog-btn"
               >
-                <span>{isSubmitting ? 'Sending Code...' : 'Continue'}</span>
+                <span>{isSubmitting ? 'Sending OTP...' : 'Send OTP'}</span>
                 {!isSubmitting && <ArrowRight size={16} />}
               </button>
             </form>
@@ -1014,7 +1138,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                 }}
                 className="sahyog-btn"
               >
-                <span>{isSubmitting ? 'Sending Code...' : 'Create Account'}</span>
+                <span>{isSubmitting ? 'Sending OTP...' : 'Send OTP & Create Account'}</span>
                 {!isSubmitting && <ArrowRight size={16} />}
               </button>
             </form>
@@ -1061,6 +1185,48 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
               >
                 <Edit2 size={12} />
                 <span>Change</span>
+              </button>
+            </div>
+
+            {/* Demo OTP Banner */}
+            <div
+              style={{
+                padding: '12px 14px',
+                backgroundColor: '#F0FDF4',
+                border: '1.5px solid #86EFAC',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={18} color="#15803D" style={{ flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#14532D' }}>
+                    Demo OTP: 123456
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#166534' }}>
+                    Enter 123456 to log in instantly
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOtpCode('123456')}
+                style={{
+                  padding: '4px 10px',
+                  backgroundColor: '#1DAA5C',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Auto Fill
               </button>
             </div>
 
@@ -1141,7 +1307,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                   }}
                 >
                   <RefreshCw size={12} />
-                  <span>Resend code via SMS</span>
+                  <span>Resend Demo OTP</span>
                 </button>
               )}
             </div>
@@ -1230,51 +1396,6 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
               </button>
             </p>
           )}
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              paddingTop: '8px',
-              borderTop: '1px dashed #E2E8F0',
-              fontSize: '0.75rem',
-              color: '#64748B',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => navigate('/customer/login')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#1DAA5C',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: 0,
-                fontSize: '0.75rem',
-              }}
-            >
-              Customer Login →
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/login')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#475569',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: 0,
-                fontSize: '0.75rem',
-              }}
-            >
-              Cooperative Admin Login →
-            </button>
-          </div>
         </div>
       </div>
     </div>
