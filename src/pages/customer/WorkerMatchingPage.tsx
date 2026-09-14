@@ -26,6 +26,8 @@ export const WorkerMatchingPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'all' | 'high_match' | 'nearby'>('all');
   const [profileWorker, setProfileWorker] = useState<Worker | null>(null);
   const [selectedWorkerForSummary, setSelectedWorkerForSummary] = useState<Worker | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'pay_on_delivery'>('razorpay');
+  const [paymentError, setPaymentError] = useState<string>('');
   const [isConfirming, setIsConfirming] = useState(false);
 
   const matchedWorkers = useMemo(() => {
@@ -49,13 +51,21 @@ export const WorkerMatchingPage: React.FC = () => {
 
   const handleSelectWorker = (worker: Worker) => {
     setSelectedWorkerForSummary(worker);
+    setPaymentError('');
   };
 
   const handleFinalConfirmBooking = async () => {
     if (!selectedWorkerForSummary) return;
+    setPaymentError('');
     setIsConfirming(true);
 
     try {
+      if (paymentMethod === 'pay_on_delivery') {
+        createBooking(selectedWorkerForSummary, 'PENDING');
+        setSelectedWorkerForSummary(null);
+        return;
+      }
+
       const tempBookingId = `b-${Date.now()}`;
       const payResult = await paymentService.initiatePayment({
         bookingId: tempBookingId,
@@ -66,14 +76,16 @@ export const WorkerMatchingPage: React.FC = () => {
       });
 
       if (payResult.success) {
-        createBooking(selectedWorkerForSummary);
+        createBooking(selectedWorkerForSummary, 'PAID');
+        setSelectedWorkerForSummary(null);
+      } else {
+        setPaymentError(payResult.errorMessage || 'Payment transaction could not be completed.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Payment transaction notice:', err);
-      createBooking(selectedWorkerForSummary);
+      setPaymentError(err?.message || 'Payment service error occurred.');
     } finally {
       setIsConfirming(false);
-      setSelectedWorkerForSummary(null);
     }
   };
 
@@ -293,6 +305,75 @@ export const WorkerMatchingPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Payment Method Selector */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)' }}>Payment Option</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setPaymentMethod('razorpay'); setPaymentError(''); }}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: paymentMethod === 'razorpay' ? '2px solid var(--primary)' : '1px solid var(--border-default)',
+                    backgroundColor: paymentMethod === 'razorpay' ? 'var(--primary-subtle)' : 'var(--bg-surface)',
+                    color: paymentMethod === 'razorpay' ? 'var(--primary-dark)' : 'var(--text-primary)',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px',
+                  }}
+                >
+                  <span>⚡ Razorpay</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 500, color: 'var(--text-muted)' }}>UPI / Cards / NetBanking</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setPaymentMethod('pay_on_delivery'); setPaymentError(''); }}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 'var(--radius-md)',
+                    border: paymentMethod === 'pay_on_delivery' ? '2px solid var(--primary)' : '1px solid var(--border-default)',
+                    backgroundColor: paymentMethod === 'pay_on_delivery' ? 'var(--primary-subtle)' : 'var(--bg-surface)',
+                    color: paymentMethod === 'pay_on_delivery' ? 'var(--primary-dark)' : 'var(--text-primary)',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px',
+                  }}
+                >
+                  <span>🤝 Cash on Service</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 500, color: 'var(--text-muted)' }}>Pay After Completion</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Error Message Display if Payment Failed */}
+            {paymentError && (
+              <div
+                style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FCA5A5',
+                  borderRadius: 'var(--radius-sm)',
+                  padding: '8px 10px',
+                  fontSize: '0.6875rem',
+                  color: '#991B1B',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '6px',
+                }}
+              >
+                <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{paymentError}</span>
+              </div>
+            )}
+
             {/* Transparent Note */}
             <div
               style={{
@@ -320,7 +401,7 @@ export const WorkerMatchingPage: React.FC = () => {
               leftIcon={<CheckCircle2 size={16} />}
               onClick={handleFinalConfirmBooking}
             >
-              {t('confirm_booking')} • ₹{totalPrice}
+              {paymentMethod === 'razorpay' ? `Pay & Confirm • ₹${totalPrice}` : `Confirm Booking • ₹${totalPrice}`}
             </Button>
           </div>
         )}

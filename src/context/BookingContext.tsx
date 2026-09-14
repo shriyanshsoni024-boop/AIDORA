@@ -41,7 +41,7 @@ interface BookingContextType {
   currentBookingId: string | null;
   setCurrentBookingId: (id: string | null) => void;
   currentBooking: Booking | null;
-  createBooking: (worker: Worker) => Booking;
+  createBooking: (worker: Worker, paymentStatus?: 'PAID' | 'PENDING') => Booking;
   updateBookingStatus: (bookingId: string, status: BookingStatus, note?: string) => void;
   advanceBookingStatus: (bookingId: string) => void;
   submitCustomerReview: (bookingId: string, rating: number, review: string) => void;
@@ -136,7 +136,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActiveView('service-detail');
   };
 
-  const createBooking = (worker: Worker): Booking => {
+  const createBooking = (worker: Worker, paymentStatus: 'PAID' | 'PENDING' = 'PAID'): Booking => {
     const targetCategory = selectedCategory || SERVICE_CATEGORIES[0];
     const currentSession = authService.getCurrentSession();
     const activeUser = currentSession?.user;
@@ -190,7 +190,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
           note: `Booking request sent to ${worker.name}`,
         },
       ],
-      paymentStatus: 'PAID',
+      paymentStatus,
       createdAt: now.toISOString(),
     };
 
@@ -206,6 +206,7 @@ export const BookingProvider: React.FC<{ children: React.ReactNode }> = ({ child
       address: newBooking.address,
       city: newBooking.city,
       worker,
+      paymentStatus,
     }).then(res => {
       if (res.success && res.data) {
         setBookings(prev => {

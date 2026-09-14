@@ -314,7 +314,7 @@ class BookingService {
           worker_payout: workerPayout,
           status: 'REQUESTED',
           otp: bookingOtp,
-          payment_status: 'PAID',
+          payment_status: dto.paymentStatus || 'PAID',
         };
 
         const { data, error } = await supabase
@@ -371,7 +371,7 @@ class BookingService {
             note: `Booking request sent to ${dto.worker.name}`,
           },
         ],
-        paymentStatus: 'PAID',
+        paymentStatus: dto.paymentStatus || 'PAID',
         createdAt: now.toISOString(),
       };
 

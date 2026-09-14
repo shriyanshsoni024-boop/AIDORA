@@ -94,7 +94,7 @@ class PaymentService {
             currency: 'INR',
             name: 'AIDORA Cooperative Platform',
             description: `Payment for ${details.serviceName} (#${details.bookingToken || details.bookingId.slice(-6)})`,
-            image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=128',
+            image: '/logo.png',
             prefill: {
               name: details.customerName || 'AIDORA Customer',
               email: details.customerEmail || 'customer@aidora.app',
@@ -125,7 +125,7 @@ class PaymentService {
               ondismiss: () => {
                 resolve({
                   success: false,
-                  errorMessage: 'Payment cancelled by user',
+                  errorMessage: 'Payment cancelled by customer',
                 });
               },
             },
@@ -141,21 +141,21 @@ class PaymentService {
           });
           rzp.open();
           return;
-        } catch (err) {
-          console.warn('Razorpay modal open error, falling back to simulated sandbox handler:', err);
+        } catch (err: any) {
+          console.error('Razorpay checkout initialization error:', err);
+          resolve({
+            success: false,
+            errorMessage: err?.message || 'Failed to initialize Razorpay checkout',
+          });
+          return;
         }
       }
 
-      // Sandbox fallback handler if network blocks checkout.js
-      setTimeout(async () => {
-        const mockPaymentId = `pay_sandbox_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        await this.recordPaymentSuccess(details.bookingId, mockPaymentId);
-        resolve({
-          success: true,
-          paymentId: mockPaymentId,
-          paymentMethod: 'AIDORA Sandbox Escrow',
-        });
-      }, 700);
+      // If Razorpay SDK could not be loaded
+      resolve({
+        success: false,
+        errorMessage: 'Razorpay checkout is unavailable. Please verify network connectivity or configure VITE_RAZORPAY_KEY_ID in .env.',
+      });
     });
   }
 

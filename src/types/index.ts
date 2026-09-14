@@ -222,6 +222,7 @@ export interface CreateBookingDto {
   address?: string;
   city?: string;
   worker: Worker;
+  paymentStatus?: 'PAID' | 'PENDING';
 }
 
 export interface ApiResponse<T = unknown> {
