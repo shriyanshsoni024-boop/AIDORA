@@ -108,7 +108,7 @@ export const hi: Record<TranslationKey, string> = {
   status_completed: 'सेवा सफलतापूर्वक पूर्ण',
   call_worker: 'कारीगर को कॉल करें',
   worker_arriving_in: 'अनुमानित आगमन: 12 मिनट में',
-  simulate_next_step: 'अगला चरण सिम्युलेट करें (डेमो प्रवाह)',
+  advance_step: 'सेवा प्रगति स्थिति अपडेट करें',
   
   // Completion & Feedback
   service_completed_title: 'सेवा सफलतापूर्वक पूरी हो गई है',

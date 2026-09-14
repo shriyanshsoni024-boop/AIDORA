@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowRight, MapPin, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { ArrowRight, MapPin, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical, KeyRound } from 'lucide-react';
 import { Logo } from '../../components/common/Logo';
 import { DEFAULT_LOCATION } from '../../data/locations';
 import { isValidIndianMobile } from '../../lib/supabase';
@@ -120,7 +120,7 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
     try {
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || 'Demo OTP: 123456');
+        setSuccessMsg(res.message || 'Verification Code: 123456');
         setStep('OTP');
         setCountdown(45);
         setCanResend(false);
@@ -173,7 +173,7 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
       const cleanPhone = phone.trim().replace(/\D/g, '');
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || 'Demo OTP: 123456');
+        setSuccessMsg(res.message || 'Verification Code: 123456');
         setCountdown(45);
         setCanResend(false);
       } else {
@@ -671,7 +671,7 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
               </button>
             </div>
 
-            {/* Demo OTP Banner */}
+            {/* Verification OTP Banner */}
             <div
               style={{
                 padding: '12px 14px',
@@ -688,10 +688,10 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
                 <CheckCircle2 size={18} color="#15803D" style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#14532D' }}>
-                    Demo OTP: 123456
+                    Verification Code: 123456
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#166534' }}>
-                    Enter 123456 to log in instantly
+                    Enter 123456 to log in securely
                   </div>
                 </div>
               </div>
@@ -709,68 +709,64 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
                   cursor: 'pointer',
                 }}
               >
-                Auto Fill
+                Auto-fill
               </button>
             </div>
 
-            {/* OTP Input */}
+            {/* OTP Input Fields */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label
-                htmlFor="otp-code-input"
                 style={{
                   fontSize: '0.8125rem',
                   fontWeight: 600,
-                  color: '#1E293B',
-                  textAlign: 'center',
-                }}
-              >
-                Enter 6-Digit Code
-              </label>
-
-              <div
-                className="sahyog-input-container"
-                style={{
+                  color: '#374151',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  border: '1px solid #CBD5E1',
-                  borderRadius: '10px',
-                  backgroundColor: '#FFFFFF',
-                  height: '52px',
+                  gap: '6px',
                 }}
               >
-                <input
-                  id="otp-code-input"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  autoFocus
-                  placeholder="• • • • • •"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  style={{
-                    border: 'none',
-                    outline: 'none',
-                    width: '100%',
-                    fontSize: '1.25rem',
-                    fontWeight: 700,
-                    letterSpacing: '0.35em',
-                    textAlign: 'center',
-                    color: '#0B0B0B',
-                    backgroundColor: 'transparent',
-                  }}
-                  required
-                />
-              </div>
+                <KeyRound size={14} color="#6B7280" />
+                <span>Enter 6-Digit Code</span>
+              </label>
+
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                autoFocus
+                style={{
+                  height: '52px',
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.35em',
+                  textAlign: 'center',
+                  borderRadius: '10px',
+                  border: '1.5px solid #D1D5DB',
+                  outline: 'none',
+                  backgroundColor: '#FAFAFA',
+                  color: '#111827',
+                  boxSizing: 'border-box',
+                }}
+              />
             </div>
 
-            {/* Resend OTP */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            {/* Countdown / Resend */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.75rem',
+                color: '#6B7280',
+              }}
+            >
+              <span>Didn't receive code?</span>
               {!canResend ? (
-                <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  Resend code in <strong>{countdown}s</strong>
-                </span>
+                <span style={{ color: '#9CA3AF' }}>Resend in {countdown}s</span>
               ) : (
                 <button
                   type="button"
@@ -790,7 +786,7 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
                   }}
                 >
                   <RefreshCw size={12} />
-                  <span>Resend Demo OTP</span>
+                  <span>Resend Code</span>
                 </button>
               )}
             </div>

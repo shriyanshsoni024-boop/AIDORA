@@ -158,6 +158,82 @@ export const MOCK_WORKERS: Worker[] = [
       workload: 4,
       fairness: 4
     }
+  },
+  {
+    id: 'w-105',
+    name: 'Anand Kumar Verma',
+    nameHi: 'आनंद कुमार वर्मा',
+    phone: '+91 98230 45671',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=256',
+    professions: ['Painter'],
+    skills: ['Wall Painting', 'Waterproofing', 'Texture Paint', 'Wood Polish', 'Putty & Primer'],
+    experienceYears: 7,
+    experienceLevel: 'Advanced',
+    rating: 4.89,
+    reviewCount: 142,
+    completedJobs: 198,
+    distanceKm: 2.4,
+    availability: 'AVAILABLE',
+    verificationStatus: 'VERIFIED',
+    cooperativeName: 'Bangalore Shramik Sahakari Sangha',
+    zone: 'Indiranagar & Central Hub',
+    certificates: [
+      { title: 'Master Finishing & Surface Protection', issuer: 'Cooperative Technical Institute', issuedYear: 2020 }
+    ],
+    trainingCompleted: ['Non-Toxic Low-VOC Coating Protocols', 'Waterproofing Application Standards'],
+    matchScore: 92,
+    matchReasons: [
+      'Specialist in interior waterproofing & wall painting',
+      '100% Cooperative KYC Verified',
+      'Within 2.4 km distance'
+    ],
+    matchScoreBreakdown: {
+      skillMatch: 29,
+      experience: 18,
+      distance: 18,
+      availability: 10,
+      rating: 9,
+      workload: 4,
+      fairness: 4
+    }
+  },
+  {
+    id: 'w-106',
+    name: 'Meena Devi',
+    nameHi: 'मीना देवी',
+    phone: '+91 97110 33499',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
+    professions: ['Deep Cleaning'],
+    skills: ['Kitchen Deep Cleaning', 'Bathroom Sanitization', 'Floor Scrubbing', 'Sofa Shampooing', 'Full Home Deep Clean'],
+    experienceYears: 5,
+    experienceLevel: 'Intermediate',
+    rating: 4.94,
+    reviewCount: 220,
+    completedJobs: 310,
+    distanceKm: 1.9,
+    availability: 'AVAILABLE',
+    verificationStatus: 'VERIFIED',
+    cooperativeName: 'City Women Artisan & Service Union',
+    zone: 'Indiranagar & East Zone',
+    certificates: [
+      { title: 'Professional Sanitation & Hygiene Standards', issuer: 'NSDC Skill Council', issuedYear: 2022 }
+    ],
+    trainingCompleted: ['Eco-Friendly Sanitization', 'Industrial Floor Scrubbing & Steam Cleaning'],
+    matchScore: 95,
+    matchReasons: [
+      'Top rated deep cleaning specialist (4.94★)',
+      '100% Cooperative KYC Verified',
+      'Ultra-nearby (1.9 km distance)'
+    ],
+    matchScoreBreakdown: {
+      skillMatch: 30,
+      experience: 16,
+      distance: 19,
+      availability: 10,
+      rating: 10,
+      workload: 5,
+      fairness: 5
+    }
   }
 ];
 
@@ -165,7 +241,8 @@ export const calculateWorkerMatches = (
   serviceId: string,
   problemDescription: string,
   isEmergency: boolean = false,
-  customerLocation: string = 'Indiranagar, Bangalore'
+  customerLocation: string = 'Indiranagar, Bangalore',
+  workerList?: Worker[]
 ): Worker[] => {
   const serviceNameMap: Record<string, string> = {
     electrician: 'Electrician',
@@ -180,19 +257,20 @@ export const calculateWorkerMatches = (
 
   const targetProfession = serviceNameMap[serviceId] || 'Electrician';
   const customerCoords = getCoordinatesForLocation(customerLocation);
+  const sourceWorkers = (workerList && workerList.length > 0) ? workerList : MOCK_WORKERS;
 
-  return MOCK_WORKERS.map(worker => {
-    const isDirectProfession = worker.professions.some(p =>
+  return sourceWorkers.map(worker => {
+    const isDirectProfession = (worker.professions || []).some(p =>
       p.toLowerCase().includes(targetProfession.toLowerCase()) ||
       targetProfession.toLowerCase().includes(p.toLowerCase())
     );
 
-    let skillScore = isDirectProfession ? 28 : 14;
-    const descLower = problemDescription.toLowerCase();
+    let skillScore = isDirectProfession ? 28 : 10;
+    const descLower = (problemDescription || '').toLowerCase();
     
     // Check if worker has specific matching skills in the description
-    worker.skills.forEach(skill => {
-      if (descLower.includes(skill.toLowerCase()) || descLower.includes('cooling') || descLower.includes('wire')) {
+    (worker.skills || []).forEach(skill => {
+      if (descLower.includes(skill.toLowerCase()) || descLower.includes('cooling') || descLower.includes('wire') || descLower.includes('leak')) {
         skillScore = Math.min(30, skillScore + 2);
       }
     });
@@ -205,32 +283,66 @@ export const calculateWorkerMatches = (
       workerZoneCoords.lat,
       workerZoneCoords.lng
     );
-    const activeDistanceKm = computedDistanceKm > 0 ? computedDistanceKm : worker.distanceKm;
+    const activeDistanceKm = computedDistanceKm > 0 ? computedDistanceKm : (worker.distanceKm || 2.0);
 
     // If emergency, prioritize nearer distance and instant availability weight
     const distanceMultiplier = isEmergency ? 3.5 : 2.5;
-    const expScore = Math.min(20, Math.round((worker.experienceYears / 10) * 20));
-    const distScore = Math.max(10, Math.min(20, Math.round(20 - activeDistanceKm * distanceMultiplier)));
-    const availScore = worker.availability === 'AVAILABLE' ? 10 : 2;
-    const ratingScore = Math.round((worker.rating / 5) * 10);
+    const expScore = Math.min(20, Math.round(((worker.experienceYears || 1) / 10) * 20));
+    const distScore = Math.max(8, Math.min(20, Math.round(20 - activeDistanceKm * distanceMultiplier)));
+    const availScore = worker.availability === 'AVAILABLE' ? 10 : -15;
+    const ratingScore = Math.round(((worker.rating || 4.5) / 5) * 10);
     const workloadScore = 5;
-    const fairnessScore = 4;
+    const fairnessScore = worker.verificationStatus === 'VERIFIED' ? 5 : 0;
+    const emergencyBonus = (isEmergency && worker.emergencyAvailable && worker.availability === 'AVAILABLE') ? 15 : 0;
 
-    const total = skillScore + expScore + distScore + availScore + ratingScore + workloadScore + fairnessScore;
+    const total = skillScore + expScore + distScore + availScore + ratingScore + workloadScore + fairnessScore + emergencyBonus;
+
+    const reasons: string[] = [];
+    if (isDirectProfession) reasons.push(`Specialist in ${targetProfession}`);
+    if (worker.verificationStatus === 'VERIFIED') reasons.push('100% Cooperative KYC Verified');
+    if (activeDistanceKm <= 3.0) reasons.push(`Nearby (${activeDistanceKm} km)`);
+    if ((worker.rating || 5.0) >= 4.8) reasons.push(`High satisfaction rating (${worker.rating}★)`);
+    if (worker.emergencyAvailable && isEmergency) reasons.push('15-Min Emergency Ready Dispatch');
 
     return {
       ...worker,
       distanceKm: activeDistanceKm,
-      matchScore: Math.min(98, total),
+      matchScore: Math.min(99, Math.max(30, total)),
+      matchReasons: reasons.length > 0 ? reasons : worker.matchReasons || ['Cooperative Verified Artisan'],
       matchScoreBreakdown: {
         skillMatch: skillScore,
         experience: expScore,
         distance: distScore,
-        availability: availScore,
+        availability: Math.max(0, availScore),
         rating: ratingScore,
         workload: workloadScore,
         fairness: fairnessScore,
       }
     };
-  }).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0));
+  })
+  .filter(worker => {
+    // 1. Strict verification requirement: MUST be KYC Verified
+    const isVerified = worker.verificationStatus === 'VERIFIED';
+    // 2. Strict availability requirement: MUST be AVAILABLE
+    const isAvailable = worker.availability === 'AVAILABLE';
+    // 3. Trade compatibility: MUST have relevant profession or matching skills
+    const isCompatible = (worker.professions || []).some(p =>
+      p.toLowerCase().includes(targetProfession.toLowerCase()) ||
+      targetProfession.toLowerCase().includes(p.toLowerCase())
+    ) || (worker.skills || []).some(s =>
+      s.toLowerCase().includes(targetProfession.toLowerCase()) ||
+      targetProfession.toLowerCase().includes(s.toLowerCase())
+    );
+
+    return isVerified && isAvailable && isCompatible;
+  })
+  .sort((a, b) => {
+    // If emergency request, prioritize emergency-ready verified workers first
+    if (isEmergency) {
+      if (a.emergencyAvailable && !b.emergencyAvailable) return -1;
+      if (!a.emergencyAvailable && b.emergencyAvailable) return 1;
+    }
+    return (b.matchScore || 0) - (a.matchScore || 0);
+  });
 };
+

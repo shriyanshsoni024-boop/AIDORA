@@ -105,7 +105,7 @@ class PaymentService {
             },
             notes: {
               booking_id: details.bookingId,
-              platform: 'AIDORA_SIH_26089',
+              platform: 'AIDORA_COOPERATIVE_PLATFORM',
               escrow_protection: 'ENABLED',
             },
             handler: async (response: any) => {
@@ -168,6 +168,7 @@ class PaymentService {
 
   /**
    * Records payment success in Supabase database (bookings + payments table)
+   * Enforces duplicate prevention and data integrity across records.
    */
   public async recordPaymentSuccess(
     bookingId: string,
@@ -195,24 +196,44 @@ class PaymentService {
           console.warn('Could not update payment_status in Supabase:', bErr.message);
         }
 
-        // 2. Insert into payments table
-        const { error: pErr } = await supabase
+        // 2. Check for existing payment to prevent duplicate records
+        const { data: existingPayment } = await supabase
           .from('payments')
-          .insert({
-            booking_id: bookingId,
-            booking_token: meta?.bookingToken || `SYH-${bookingId.slice(-5)}`,
-            customer_name: meta?.customerName || 'AIDORA Customer',
-            amount: meta?.amount || 0,
-            currency: 'INR',
-            payment_method: meta?.paymentMethod || 'Razorpay / UPI Escrow',
-            payment_status: 'PAID',
-            razorpay_payment_id: paymentId,
-            razorpay_order_id: meta?.orderId || null,
-            razorpay_signature: meta?.signature || null,
-          });
+          .select('id')
+          .eq('booking_id', bookingId)
+          .maybeSingle();
 
-        if (pErr) {
-          console.warn('Could not insert payment record into payments table:', pErr.message);
+        if (existingPayment) {
+          await supabase
+            .from('payments')
+            .update({
+              payment_status: 'PAID',
+              razorpay_payment_id: paymentId,
+              razorpay_order_id: meta?.orderId || null,
+              razorpay_signature: meta?.signature || null,
+              amount: meta?.amount,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingPayment.id);
+        } else {
+          const { error: pErr } = await supabase
+            .from('payments')
+            .insert({
+              booking_id: bookingId,
+              booking_token: meta?.bookingToken || `SYH-${bookingId.slice(-5)}`,
+              customer_name: meta?.customerName || 'AIDORA Customer',
+              amount: meta?.amount || 0,
+              currency: 'INR',
+              payment_method: meta?.paymentMethod || 'Razorpay / UPI Escrow',
+              payment_status: 'PAID',
+              razorpay_payment_id: paymentId,
+              razorpay_order_id: meta?.orderId || null,
+              razorpay_signature: meta?.signature || null,
+            });
+
+          if (pErr) {
+            console.warn('Could not insert payment record into payments table:', pErr.message);
+          }
         }
 
         return true;

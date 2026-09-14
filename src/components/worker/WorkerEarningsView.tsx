@@ -205,10 +205,10 @@ export const WorkerEarningsView: React.FC = () => {
           </div>
           <div>
             <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>
-              HDFC Bank Auto-Settlement
+              Cooperative Direct Settlement (Bank / UPI)
             </div>
             <div style={{ fontSize: '0.6875rem', color: '#64748B', marginTop: '2px' }}>
-              •••• 4019 (UPI Verified) • Daily 09:00 PM auto-deposit
+              •••• 4019 (KYC Verified) • Daily EOD Cooperative Clearing Ledger
             </div>
           </div>
         </div>
@@ -272,6 +272,7 @@ export const WorkerEarningsView: React.FC = () => {
               const gross = item.amount || 474;
               const fee = item.platformFee || 0;
               const net = item.netPayout || gross - fee;
+              const isCleared = item.status === 'PAID';
 
               return (
                 <div
@@ -293,11 +294,11 @@ export const WorkerEarningsView: React.FC = () => {
                         width: '38px',
                         height: '38px',
                         borderRadius: '12px',
-                        backgroundColor: '#F0FDF4',
+                        backgroundColor: isCleared ? '#F0FDF4' : '#FEF9C3',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#1DAA5C',
+                        color: isCleared ? '#1DAA5C' : '#854D0E',
                       }}
                     >
                       <ArrowUpRight size={20} />
@@ -316,7 +317,7 @@ export const WorkerEarningsView: React.FC = () => {
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1DAA5C' }}>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: isCleared ? '#1DAA5C' : '#D97706' }}>
                       +₹{net}
                     </div>
                     <div style={{ fontSize: '0.625rem', color: '#64748B', marginTop: '2px' }}>
@@ -326,15 +327,15 @@ export const WorkerEarningsView: React.FC = () => {
                       style={{
                         fontSize: '0.5625rem',
                         fontWeight: 800,
-                        color: '#1DAA5C',
-                        backgroundColor: '#ECFDF5',
+                        color: isCleared ? '#1DAA5C' : '#B45309',
+                        backgroundColor: isCleared ? '#ECFDF5' : '#FEF3C7',
                         padding: '1px 5px',
                         borderRadius: '4px',
                         display: 'inline-block',
                         marginTop: '2px',
                       }}
                     >
-                      CREDITED
+                      {isCleared ? 'CLEARED TO BANK' : 'PENDING EOD CLEARING'}
                     </span>
                   </div>
                 </div>

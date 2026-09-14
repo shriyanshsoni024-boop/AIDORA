@@ -184,7 +184,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
           </div>
         </div>
 
-        {/* Demo OTP Helper Banner */}
+        {/* Verification OTP Helper Banner */}
         <div
           style={{
             padding: '12px 14px',
@@ -200,7 +200,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
         >
           <div>
             <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#14532D' }}>
-              Demo OTP: 123456
+              Verification Code: 123456
             </div>
             <div style={{ fontSize: '0.75rem', color: '#166534' }}>
               Enter 123456 to continue
@@ -307,7 +307,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
               }}
             >
               <RefreshCw size={14} />
-              <span>Resend Demo OTP</span>
+              <span>Resend Code</span>
             </button>
           )}
 

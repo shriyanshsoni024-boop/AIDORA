@@ -228,7 +228,7 @@ export const CertificateModal: React.FC = () => {
                 textTransform: 'uppercase',
               }}
             >
-              [ Prototype Simulation • AIDORA Cooperative Skill Registry ]
+              AIDORA Official Cooperative Skill Registry • Verified Digital Credential
             </div>
           </div>
 

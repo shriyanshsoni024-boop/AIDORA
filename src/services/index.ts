@@ -11,3 +11,4 @@ export * from './certificateService';
 export * from './aiService';
 export * from './kycService';
 export * from './geoService';
+export * from './welfareService';

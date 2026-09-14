@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { ArrowLeft, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { paymentService } from '../../services/paymentService';
+import { workerService } from '../../services/workerService';
 
 export const WorkerMatchingPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -29,15 +30,25 @@ export const WorkerMatchingPage: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'pay_on_delivery'>('razorpay');
   const [paymentError, setPaymentError] = useState<string>('');
   const [isConfirming, setIsConfirming] = useState(false);
+  const [allWorkers, setAllWorkers] = useState<Worker[]>([]);
+
+  React.useEffect(() => {
+    workerService.getWorkers().then((res) => {
+      if (res.success && res.data) {
+        setAllWorkers(res.data);
+      }
+    });
+  }, []);
 
   const matchedWorkers = useMemo(() => {
     return calculateWorkerMatches(
       selectedCategory?.id || 'electrician',
       problemDescription,
       urgency === 'EMERGENCY',
-      selectedLocation || 'Indiranagar, Bangalore'
+      selectedLocation || 'Indiranagar, Bangalore',
+      allWorkers
     );
-  }, [selectedCategory, problemDescription, urgency, selectedLocation]);
+  }, [selectedCategory, problemDescription, urgency, selectedLocation, allWorkers]);
 
   const filteredWorkers = useMemo(() => {
     if (activeFilter === 'high_match') {

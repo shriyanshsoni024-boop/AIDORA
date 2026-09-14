@@ -1,9 +1,9 @@
 # AIDORA — Product Requirements Document
 
 **Version:** 1.0  
-**Status:** MVP / Prototype  
-**Project:** AIDORA (formerly SAHYOG)  
-**Primary Development Goal:** Build a functional prototype for Smart India Hackathon / national-level screening.
+**Status:** Production Readiness  
+**Project:** AIDORA Cooperative Platform  
+**Primary Goal:** Build a scalable, production-grade cooperative service platform for skilled artisans and household consumers.
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## 1.3 Simple Explanation
 
-SAHYOG creates a three-sided digital ecosystem:
+AIDORA creates a three-sided digital ecosystem:
 
 - **Customers** get access to trusted and suitable skilled workers.
 - **Workers** get relevant work opportunities, skill visibility, training, certification and control over their availability.
@@ -1701,33 +1701,31 @@ The prototype should optimize for:
 5. Working backend integration
 6. Reliable state transitions
 7. Hindi/English support
-8. Strong cooperative/admin demonstration
-
-The prototype should not attempt to simulate a fully production-ready national platform.
+8. Strong cooperative/admin workflow
 
 ---
 
-# 58. Demo Success Criteria
+# 58. Platform Verification Criteria
 
-A successful prototype should allow a judge to understand three things immediately.
+A successful implementation fulfills three core requirements:
 
 ### 1. Customer
 
-> **Customers can easily get trusted cooperative services.**
+> **Customers can easily get trusted cooperative services with transparent pricing and live status tracking.**
 
 ### 2. Worker
 
-> **Workers gain control, visibility and relevant opportunities.**
+> **Workers gain control, visibility, zero-commission earnings, skill certification, and cooperative mutual aid.**
 
 ### 3. Cooperative
 
-> **Cooperatives can use data and AI to better utilize and plan their workforce.**
+> **Cooperatives can use data and AI to better utilize, dispatch, and plan their skilled workforce.**
 
 ---
 
 # 59. Core Differentiators
 
-SAHYOG differentiates itself through:
+AIDORA differentiates itself through:
 
 ### Cooperative Workforce
 

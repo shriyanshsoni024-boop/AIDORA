@@ -503,6 +503,11 @@ class BookingService {
 
   /**
    * Submit customer review and rating for completed booking
+   * Enforces:
+   * 1. Booking must be COMPLETED
+   * 2. Rating must be 1 to 5
+   * 3. Duplicate review prevention on the same booking
+   * 4. Accurate mathematical average rating recalculation
    */
   public async submitCustomerReview(
     bookingId: string,
@@ -519,6 +524,15 @@ class BookingService {
     }
 
     const current = res.data;
+
+    // Enforce booking status: Must be COMPLETED
+    if (current.status !== 'COMPLETED') {
+      return {
+        success: false,
+        error: 'Reviews can only be submitted after the service has been completed.',
+      };
+    }
+
     const updatedBooking: Booking = {
       ...current,
       customerRating: rating,
@@ -536,7 +550,7 @@ class BookingService {
           })
           .or(`id.eq.${bookingId},token.eq.${bookingId}`);
 
-        // 2. Insert into reviews table
+        // 2. Resolve target worker ID
         let targetWorkerId = current.worker?.id;
         if (targetWorkerId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetWorkerId)) {
           const { data: dbW } = await supabase
@@ -547,18 +561,43 @@ class BookingService {
           targetWorkerId = dbW?.id;
         }
 
-        await supabase.from('reviews').insert({
-          booking_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(current.id) ? current.id : null,
-          worker_id: targetWorkerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetWorkerId) ? targetWorkerId : null,
-          author_name: current.customerName || 'Customer',
-          rating,
-          comment: reviewText,
-          service_name: current.serviceName,
-          chips: [],
-        });
+        const validBookingUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(current.id)
+          ? current.id
+          : null;
 
-        // 3. Update worker average rating if worker exists
-        if (targetWorkerId) {
+        // Check for existing review to prevent duplicates
+        let isFirstReview = true;
+        if (validBookingUuid) {
+          const { data: existingRev } = await supabase
+            .from('reviews')
+            .select('id')
+            .eq('booking_id', validBookingUuid)
+            .maybeSingle();
+
+          if (existingRev) {
+            isFirstReview = false;
+            await supabase
+              .from('reviews')
+              .update({
+                rating,
+                comment: reviewText,
+              })
+              .eq('id', existingRev.id);
+          } else {
+            await supabase.from('reviews').insert({
+              booking_id: validBookingUuid,
+              worker_id: targetWorkerId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetWorkerId) ? targetWorkerId : null,
+              author_name: current.customerName || 'Customer',
+              rating,
+              comment: reviewText,
+              service_name: current.serviceName,
+              chips: [],
+            });
+          }
+        }
+
+        // 3. Update worker average rating if worker exists (only increment review count on first review)
+        if (targetWorkerId && isFirstReview) {
           const { data: workerData } = await supabase
             .from('workers')
             .select('rating, review_count')
@@ -587,17 +626,24 @@ class BookingService {
 
     this.syncLocalBooking(updatedBooking);
 
-    // Also append to global reviews collection
+    // Also update global reviews collection (prevent duplicate in local cache)
     const reviews = storageService.getItem<Review[]>(STORAGE_KEYS.REVIEWS, []);
+    const existingIndex = reviews.findIndex((r) => r.serviceName === current.serviceName && r.authorName === current.customerName);
     const newReview: Review = {
-      id: `rev-${Date.now()}`,
+      id: existingIndex >= 0 ? reviews[existingIndex].id : `rev-${Date.now()}`,
       authorName: current.customerName || 'Customer',
       rating,
       comment: reviewText,
       date: 'Just now',
       serviceName: current.serviceName,
     };
-    storageService.setItem(STORAGE_KEYS.REVIEWS, [newReview, ...reviews]);
+
+    if (existingIndex >= 0) {
+      reviews[existingIndex] = newReview;
+      storageService.setItem(STORAGE_KEYS.REVIEWS, reviews);
+    } else {
+      storageService.setItem(STORAGE_KEYS.REVIEWS, [newReview, ...reviews]);
+    }
 
     return {
       success: true,

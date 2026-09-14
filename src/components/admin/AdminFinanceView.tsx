@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminService, FinanceOverview } from '../../services/adminService';
-import { IndianRupee, CheckCircle2, Clock } from 'lucide-react';
+import { welfareService, WelfareFundOverview } from '../../services/welfareService';
+import { IndianRupee, CheckCircle2, Clock, HeartHandshake, Check, X } from 'lucide-react';
 
 export const AdminFinanceView: React.FC = () => {
   const [finance, setFinance] = useState<FinanceOverview>({
@@ -12,13 +13,38 @@ export const AdminFinanceView: React.FC = () => {
     transactions: [],
   });
 
+  const [welfareOverview, setWelfareOverview] = useState<WelfareFundOverview>({
+    totalFundBalance: 250000,
+    totalClaimsSettled: 0,
+    totalDisbursedAmount: 0,
+    activeClaimsCount: 0,
+    claims: [],
+  });
+  const [processingClaimId, setProcessingClaimId] = useState<string | null>(null);
+
+  const loadData = async () => {
+    const [finRes, welfRes] = await Promise.all([
+      adminService.getFinancialOverview(),
+      welfareService.getFundOverview(),
+    ]);
+    if (finRes.success && finRes.data) setFinance(finRes.data);
+    if (welfRes.success && welfRes.data) setWelfareOverview(welfRes.data);
+  };
+
   useEffect(() => {
-    adminService.getFinancialOverview().then((res) => {
-      if (res.success && res.data) {
-        setFinance(res.data);
-      }
-    });
+    loadData();
   }, []);
+
+  const handleClaimAction = async (claimId: string, action: 'DISBURSE' | 'REJECT') => {
+    if (processingClaimId) return;
+    setProcessingClaimId(claimId);
+    try {
+      await welfareService.processClaim(claimId, action);
+      await loadData();
+    } finally {
+      setProcessingClaimId(null);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '14px 16px' }}>
@@ -37,7 +63,7 @@ export const AdminFinanceView: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--sahyog-green, #1DAA5C)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            Daily Cooperative Settlement Clearing
+            Cooperative Settlement & Clearing Ledger
           </span>
           <span
             style={{
@@ -50,17 +76,39 @@ export const AdminFinanceView: React.FC = () => {
               border: '1px solid var(--success-border)',
             }}
           >
-            0% COMM • 100% ARTISAN
+            0% COMMISSION • 100% ARTISAN
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-          <span style={{ fontSize: '1.875rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-            ₹{finance.workerPayoutsTotal.toLocaleString()}
-          </span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            Direct Artisan Labor Disbursals
-          </span>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '1.875rem', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              ₹{finance.workerPayoutsTotal.toLocaleString()}
+            </span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              Direct Artisan Labor Disbursals
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await adminService.processClearingBatch();
+              await loadData();
+            }}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'var(--sahyog-green, #1DAA5C)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: 'var(--radius-xs)',
+              fontSize: '0.6875rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+          >
+            Process Clearing Batch
+          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px', paddingTop: '10px', borderTop: '1px solid var(--border-default)' }}>
@@ -92,7 +140,7 @@ export const AdminFinanceView: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-              Settled Direct to UPI
+              Settled to Bank / UPI
             </span>
             <CheckCircle2 size={14} color="var(--success-dark)" />
           </div>
@@ -100,7 +148,7 @@ export const AdminFinanceView: React.FC = () => {
             {finance.settledCount} Payments
           </div>
           <div style={{ fontSize: '0.625rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            Instant HDFC / NPCI Clearing
+            Cooperative Direct Clearing
           </div>
         </div>
 
@@ -127,6 +175,135 @@ export const AdminFinanceView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 3. Cooperative Safety Net & Mutual Aid Relief Fund */}
+      <div
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 'var(--radius-md)',
+          padding: '14px',
+          border: '1.5px solid #BBF7D0',
+          boxShadow: 'var(--shadow-xs)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <HeartHandshake size={16} color="var(--sahyog-green, #1DAA5C)" />
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+              Cooperative Welfare & Safety Net Fund
+            </h3>
+          </div>
+          <span style={{ fontSize: '0.625rem', fontWeight: 800, color: '#065F46', backgroundColor: '#ECFDF5', padding: '2px 6px', borderRadius: '4px' }}>
+            Fund Pool: ₹{welfareOverview.totalFundBalance.toLocaleString()}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', fontSize: '0.6875rem' }}>
+          <div style={{ backgroundColor: 'var(--bg-app)', padding: '6px 8px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)' }}>Claims Settled:</div>
+            <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginTop: '1px' }}>{welfareOverview.totalClaimsSettled}</div>
+          </div>
+          <div style={{ backgroundColor: 'var(--bg-app)', padding: '6px 8px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)' }}>Total Disbursed:</div>
+            <div style={{ fontWeight: 800, color: 'var(--success-dark)', marginTop: '1px' }}>₹{welfareOverview.totalDisbursedAmount.toLocaleString()}</div>
+          </div>
+          <div style={{ backgroundColor: 'var(--bg-app)', padding: '6px 8px', borderRadius: 'var(--radius-xs)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ color: 'var(--text-muted)' }}>Pending Claims:</div>
+            <div style={{ fontWeight: 800, color: welfareOverview.activeClaimsCount > 0 ? '#B45309' : 'var(--text-primary)', marginTop: '1px' }}>
+              {welfareOverview.activeClaimsCount}
+            </div>
+          </div>
+        </div>
+
+        {/* Claims List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {welfareOverview.claims.map((claim) => (
+            <div
+              key={claim.id}
+              style={{
+                padding: '8px 10px',
+                backgroundColor: claim.status === 'PENDING' ? '#FFFBEB' : 'var(--bg-app)',
+                borderRadius: 'var(--radius-xs)',
+                border: claim.status === 'PENDING' ? '1px solid #FDE68A' : '1px solid var(--border-subtle)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {claim.workerName} ({claim.trade})
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)' }}>
+                  {claim.title} • <strong>₹{claim.requestedAmount}</strong>
+                </div>
+                <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                  Incident: {claim.incidentDate} • {claim.description}
+                </div>
+              </div>
+
+              {claim.status === 'PENDING' || claim.status === 'UNDER_REVIEW' ? (
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <button
+                    type="button"
+                    disabled={processingClaimId === claim.id}
+                    onClick={() => handleClaimAction(claim.id, 'DISBURSE')}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: 'var(--radius-xs)',
+                      backgroundColor: 'var(--success)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontSize: '0.625rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                    }}
+                  >
+                    <Check size={11} /> Disburse
+                  </button>
+                  <button
+                    type="button"
+                    disabled={processingClaimId === claim.id}
+                    onClick={() => handleClaimAction(claim.id, 'REJECT')}
+                    style={{
+                      padding: '4px 6px',
+                      borderRadius: 'var(--radius-xs)',
+                      backgroundColor: '#FFFFFF',
+                      color: 'var(--danger)',
+                      border: '1px solid var(--border-default)',
+                      fontSize: '0.625rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ) : (
+                <span
+                  style={{
+                    fontSize: '0.5625rem',
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-xs)',
+                    backgroundColor: claim.status === 'DISBURSED' ? 'var(--success-light)' : '#F1F5F9',
+                    color: claim.status === 'DISBURSED' ? 'var(--success-dark)' : 'var(--text-muted)',
+                  }}
+                >
+                  {claim.status}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
 
       {/* 3. Transaction Breakdown Ledger */}
       <div

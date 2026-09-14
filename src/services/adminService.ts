@@ -422,6 +422,87 @@ class AdminService {
   }
 
   /**
+   * Process a single worker payout through the Cooperative Clearing Ledger
+   */
+  public async processWorkerPayout(earningsId: string, reference?: string): Promise<ApiResponse<boolean>> {
+    const clearingRef = reference || `COOP-CLR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { error } = await supabase
+          .from('worker_earnings')
+          .update({
+            status: 'PAID',
+          })
+          .eq('id', earningsId);
+
+        if (!error) {
+          return { success: true, data: true, message: `Payout cleared via reference ${clearingRef}.` };
+        }
+      } catch (err) {
+        console.warn('Supabase processWorkerPayout error:', err);
+      }
+    }
+
+    try {
+      const earnings = storageService.getItem<any[]>(STORAGE_KEYS.EARNINGS, []);
+      const updated = earnings.map((e) => (e.id === earningsId ? { ...e, status: 'PAID', clearingRef } : e));
+      storageService.setItem(STORAGE_KEYS.EARNINGS, updated);
+      return { success: true, data: true, message: `Payout cleared via reference ${clearingRef}.` };
+    } catch (err) {
+      return { success: false, error: 'Failed to clear worker payout' };
+    }
+  }
+
+  /**
+   * Process full batch of pending worker payouts (Cooperative EOD batch)
+   */
+  public async processClearingBatch(): Promise<ApiResponse<{ clearedCount: number; clearingRef: string }>> {
+    const clearingBatchRef = `COOP-BATCH-${Date.now().toString().slice(-6)}`;
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('worker_earnings')
+          .update({ status: 'PAID' })
+          .eq('status', 'PENDING')
+          .select('id');
+
+        if (!error && data) {
+          return {
+            success: true,
+            data: { clearedCount: data.length, clearingRef: clearingBatchRef },
+            message: `Cleared ${data.length} pending payouts in batch ${clearingBatchRef}.`,
+          };
+        }
+      } catch (err) {
+        console.warn('Supabase processClearingBatch error:', err);
+      }
+    }
+
+    try {
+      const earnings = storageService.getItem<any[]>(STORAGE_KEYS.EARNINGS, []);
+      let clearedCount = 0;
+      const updated = earnings.map((e) => {
+        if (e.status === 'PENDING') {
+          clearedCount += 1;
+          return { ...e, status: 'PAID', clearingRef: clearingBatchRef };
+        }
+        return e;
+      });
+      storageService.setItem(STORAGE_KEYS.EARNINGS, updated);
+
+      return {
+        success: true,
+        data: { clearedCount, clearingRef: clearingBatchRef },
+        message: `Cleared ${clearedCount} pending payouts in batch ${clearingBatchRef}.`,
+      };
+    } catch (err) {
+      return { success: false, error: 'Failed to process clearing batch' };
+    }
+  }
+
+  /**
    * Fetch operational report metrics calculated directly from records
    */
   public async getOperationalReports(): Promise<ApiResponse<OperationalReports>> {

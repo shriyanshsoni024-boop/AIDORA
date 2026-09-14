@@ -5,9 +5,10 @@ import { X, ShieldCheck, Award, Star, Phone, MapPin, Building2, Zap, Briefcase }
 interface WorkerDetailModalProps {
   worker: Worker | null;
   onClose: () => void;
+  onUpdateStatus?: (workerId: string, updates: Partial<Worker>) => Promise<void>;
 }
 
-export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, onClose }) => {
+export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, onClose, onUpdateStatus }) => {
   if (!worker) return null;
 
   return (
@@ -223,6 +224,73 @@ export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, on
           </div>
         </div>
 
+        {/* Admin Operational Actions */}
+        {onUpdateStatus && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-default)' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+              Admin Verification & Governance
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              {worker.verificationStatus !== 'VERIFIED' ? (
+                <button
+                  type="button"
+                  onClick={() => onUpdateStatus(worker.id, { verificationStatus: 'VERIFIED' })}
+                  style={{
+                    padding: '8px',
+                    borderRadius: 'var(--radius-xs)',
+                    backgroundColor: 'var(--success)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <ShieldCheck size={14} /> Verify Worker
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onUpdateStatus(worker.id, { verificationStatus: 'REJECTED' })}
+                  style={{
+                    padding: '8px',
+                    borderRadius: 'var(--radius-xs)',
+                    backgroundColor: '#FEF2F2',
+                    color: 'var(--danger)',
+                    border: '1px solid #FECACA',
+                    fontWeight: 800,
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Revoke KYC
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => onUpdateStatus(worker.id, { availability: worker.availability === 'AVAILABLE' ? 'NOT_AVAILABLE' : 'AVAILABLE' })}
+                style={{
+                  padding: '8px',
+                  borderRadius: 'var(--radius-xs)',
+                  backgroundColor: worker.availability === 'AVAILABLE' ? '#FEF2F2' : 'var(--primary-light)',
+                  color: worker.availability === 'AVAILABLE' ? 'var(--danger)' : 'var(--primary)',
+                  border: `1px solid ${worker.availability === 'AVAILABLE' ? '#FECACA' : 'var(--primary-border)'}`,
+                  fontWeight: 800,
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                }}
+              >
+                {worker.availability === 'AVAILABLE' ? 'Suspend / Offline' : 'Activate Online'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Close Button */}
         <button
           type="button"
@@ -237,7 +305,7 @@ export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, on
             fontSize: '0.8125rem',
             border: 'none',
             cursor: 'pointer',
-            marginTop: '6px',
+            marginTop: '4px',
           }}
         >
           Close Dossier
@@ -246,3 +314,4 @@ export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, on
     </div>
   );
 };
+

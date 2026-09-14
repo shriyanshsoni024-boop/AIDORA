@@ -12,9 +12,13 @@ import {
   MapPin,
   LogOut,
   HeartHandshake,
+  FilePlus,
+  X,
+  Send,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getWorkerTheme } from '../../styles/workerThemes';
+import { welfareService, WelfareClaim, WelfareClaimType } from '../../services/welfareService';
 
 export const WorkerProfileView: React.FC = () => {
   const { logout } = useAuth();
@@ -29,6 +33,58 @@ export const WorkerProfileView: React.FC = () => {
     skillsMatrix,
   } = useWorker();
   const { language } = useLanguage();
+
+  const [claims, setClaims] = React.useState<WelfareClaim[]>([]);
+  const [showClaimModal, setShowClaimModal] = React.useState(false);
+  const [claimType, setClaimType] = React.useState<WelfareClaimType>('TOOL_DAMAGE');
+  const [claimTitle, setClaimTitle] = React.useState('');
+  const [claimDesc, setClaimDesc] = React.useState('');
+  const [claimAmount, setClaimAmount] = React.useState('2500');
+  const [isSubmittingClaim, setIsSubmittingClaim] = React.useState(false);
+  const [claimMsg, setClaimMsg] = React.useState('');
+
+  const loadClaims = React.useCallback(async () => {
+    const res = await welfareService.getWelfareClaims(worker.id);
+    if (res.success && res.data) {
+      setClaims(res.data);
+    }
+  }, [worker.id]);
+
+  React.useEffect(() => {
+    loadClaims();
+  }, [loadClaims]);
+
+  const handleClaimSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimTitle.trim() || !claimDesc.trim()) return;
+
+    setIsSubmittingClaim(true);
+    setClaimMsg('');
+    try {
+      const res = await welfareService.submitClaim({
+        workerId: worker.id,
+        workerName: worker.name,
+        trade: worker.professions[0] || 'Electrician',
+        claimType,
+        title: claimTitle,
+        description: claimDesc,
+        requestedAmount: Number(claimAmount) || 2000,
+      });
+
+      if (res.success) {
+        setClaimMsg('Assistance request submitted to Cooperative Welfare Board.');
+        setClaimTitle('');
+        setClaimDesc('');
+        await loadClaims();
+        setTimeout(() => {
+          setShowClaimModal(false);
+          setClaimMsg('');
+        }, 1500);
+      }
+    } finally {
+      setIsSubmittingClaim(false);
+    }
+  };
 
   const theme = getWorkerTheme(worker.professions);
 
@@ -305,8 +361,78 @@ export const WorkerProfileView: React.FC = () => {
               {isEmergencyAvailable ? 'Opted In' : 'Opt In'}
             </button>
           </div>
+
+          {/* Internal Assistance Claims Record */}
+          <div style={{ paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0F172A' }}>
+                Mutual Aid & Incident Assistance ({claims.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowClaimModal(true)}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  backgroundColor: '#1DAA5C',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.6875rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <FilePlus size={11} /> Request Relief
+              </button>
+            </div>
+
+            {claims.length === 0 ? (
+              <div style={{ fontSize: '0.6875rem', color: '#64748B', backgroundColor: '#F8FAFC', padding: '6px 8px', borderRadius: '6px' }}>
+                No active relief claims. Covered for accident, medical, & tool damage on duty.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {claims.map((c) => (
+                  <div
+                    key={c.id}
+                    style={{
+                      padding: '6px 8px',
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '0.6875rem',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{c.title}</div>
+                      <div style={{ fontSize: '0.625rem', color: '#64748B' }}>₹{c.requestedAmount} requested • {c.incidentDate}</div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '0.5625rem',
+                        fontWeight: 800,
+                        padding: '1px 5px',
+                        borderRadius: '4px',
+                        backgroundColor: c.status === 'DISBURSED' ? '#ECFDF5' : c.status === 'APPROVED' ? '#EFF6FF' : '#FEF3C7',
+                        color: c.status === 'DISBURSED' ? '#065F46' : c.status === 'APPROVED' ? '#1E40AF' : '#92400E',
+                      }}
+                    >
+                      {c.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
 
       {/* 4. Certificate Wallet Document Cards */}
       <div>
@@ -417,6 +543,201 @@ export const WorkerProfileView: React.FC = () => {
         <LogOut size={18} />
         <span>Log Out of Artisan Account</span>
       </button>
+
+      {/* 7. Mutual Aid Assistance Claim Modal */}
+      {showClaimModal && (
+        <div
+          className="animate-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 110,
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setShowClaimModal(false)}
+        >
+          <div
+            className="animate-modal-enter"
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <HeartHandshake size={20} color="#1DAA5C" />
+                <h3 style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+                  Cooperative Mutual Aid Relief
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowClaimModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.75rem', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
+              Submit an internal assistance claim for on-duty incident, tool damage, or emergency medical support under your cooperative safety net.
+            </p>
+
+            {claimMsg && (
+              <div style={{ backgroundColor: '#ECFDF5', color: '#065F46', padding: '8px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 700 }}>
+                ✓ {claimMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleClaimSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.6875rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  Assistance Category:
+                </label>
+                <select
+                  value={claimType}
+                  onChange={(e) => setClaimType(e.target.value as WelfareClaimType)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8125rem',
+                    backgroundColor: '#F8FAFC',
+                    outline: 'none',
+                  }}
+                >
+                  <option value="TOOL_DAMAGE">Tool / Equipment Damage on Duty</option>
+                  <option value="ON_DUTY_ACCIDENT">On-Duty Minor Accident / Injury</option>
+                  <option value="MEDICAL_EMERGENCY">Emergency Medical Support</option>
+                  <option value="FAMILY_RELIEF">Artisan Family Emergency Relief</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.6875rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  Claim Title / Summary:
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Pipe Wrench broken at job site"
+                  value={claimTitle}
+                  onChange={(e) => setClaimTitle(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8125rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.6875rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  Requested Relief Amount (₹):
+                </label>
+                <input
+                  type="number"
+                  min={500}
+                  max={50000}
+                  value={claimAmount}
+                  onChange={(e) => setClaimAmount(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8125rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.6875rem', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>
+                  Incident Description & Details:
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe what happened during the dispatch..."
+                  value={claimDesc}
+                  onChange={(e) => setClaimDesc(e.target.value)}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '0.8125rem',
+                    outline: 'none',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowClaimModal(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '10px',
+                    backgroundColor: '#F1F5F9',
+                    border: 'none',
+                    color: '#475569',
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingClaim}
+                  style={{
+                    flex: 2,
+                    padding: '10px',
+                    borderRadius: '10px',
+                    backgroundColor: '#1DAA5C',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.8125rem',
+                    cursor: isSubmittingClaim ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Send size={14} />
+                  {isSubmittingClaim ? 'Submitting...' : 'Submit Claim'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

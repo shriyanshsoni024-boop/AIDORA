@@ -65,7 +65,7 @@ export const generateSkillCertificatePdf = (params: CertificateGenerateParams): 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(slateText[0], slateText[1], slateText[2]);
-  doc.text('Affiliated under the Cooperative Societies Act & Smart India Hackathon 2024 / PS 26089', pageWidth / 2, y, { align: 'center' });
+  doc.text('Affiliated under the National Cooperative Societies Framework & Vocational Skill Standards', pageWidth / 2, y, { align: 'center' });
 
   y += 14;
   doc.setFont('times', 'bold');

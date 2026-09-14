@@ -44,7 +44,7 @@ export const generateTaxInvoicePdf = (options: InvoiceOptions): void => {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
-  doc.text('National Artisans & Gig Workers Cooperative Federation • SIH 26089', margin, 21);
+  doc.text('National Artisans & Gig Workers Cooperative Federation', margin, 21);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);

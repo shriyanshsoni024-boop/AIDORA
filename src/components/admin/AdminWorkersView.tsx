@@ -45,6 +45,14 @@ export const AdminWorkersView: React.FC = () => {
     }
   };
 
+  const handleUpdateWorkerStatus = async (workerId: string, updates: Partial<Worker>) => {
+    const res = await workerService.updateWorker(workerId, updates);
+    if (res.success && res.data) {
+      setSelectedWorker(res.data);
+      await loadWorkersData();
+    }
+  };
+
   // Filter workers based on search and filter type
   const filteredWorkers = workers.filter((w) => {
     const matchesSearch =
@@ -334,7 +342,12 @@ export const AdminWorkersView: React.FC = () => {
       </div>
 
       {/* Worker Detail Modal */}
-      <WorkerDetailModal worker={selectedWorker} onClose={() => setSelectedWorker(null)} />
+      <WorkerDetailModal
+        worker={selectedWorker}
+        onClose={() => setSelectedWorker(null)}
+        onUpdateStatus={handleUpdateWorkerStatus}
+      />
     </div>
   );
 };
+

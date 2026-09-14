@@ -153,7 +153,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
     try {
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || 'Demo OTP: 123456');
+        setSuccessMsg(res.message || 'Verification Code: 123456');
         setAuthStep('OTP');
         setCountdown(45);
         setCanResend(false);
@@ -200,7 +200,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
     try {
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || 'Demo OTP: 123456');
+        setSuccessMsg(res.message || 'Verification Code: 123456');
         setAuthStep('OTP');
         setCountdown(45);
         setCanResend(false);
@@ -265,7 +265,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
       const cleanPhone = phone.trim().replace(/\D/g, '');
       const res = await sendPhoneOtp({ phone: cleanPhone });
       if (res.success) {
-        setSuccessMsg(res.message || 'Demo OTP: 123456');
+        setSuccessMsg(res.message || 'Verification Code: 123456');
         setCountdown(45);
         setCanResend(false);
       } else {
@@ -1162,7 +1162,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
               </button>
             </div>
 
-            {/* Demo OTP Banner */}
+            {/* Verification OTP Banner */}
             <div
               style={{
                 padding: '12px 14px',
@@ -1179,10 +1179,10 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                 <CheckCircle2 size={18} color="#15803D" style={{ flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#14532D' }}>
-                    Demo OTP: 123456
+                    Verification Code: 123456
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#166534' }}>
-                    Enter 123456 to log in instantly
+                    Enter 123456 to log in securely
                   </div>
                 </div>
               </div>
@@ -1200,7 +1200,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                   cursor: 'pointer',
                 }}
               >
-                Auto Fill
+                Auto-fill
               </button>
             </div>
 
@@ -1281,7 +1281,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
                   }}
                 >
                   <RefreshCw size={12} />
-                  <span>Resend Demo OTP</span>
+                  <span>Resend Code</span>
                 </button>
               )}
             </div>

@@ -417,7 +417,7 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
           <div
             onClick={() => setActiveInfoModal({
               title: 'About AIDORA Cooperative Platform',
-              content: 'AIDORA (SIH Problem Statement 26089) is India’s revolutionary skilled artisans cooperative federation. We eliminate exploitative middleman commissions, providing 100% fair direct artisan earnings, authentic skill verification, and standardized quality pricing.'
+              content: 'AIDORA is India’s revolutionary skilled artisans cooperative federation. We eliminate exploitative middleman commissions, providing 100% fair direct artisan earnings, authentic skill verification, and standardized quality pricing.'
             })}
             style={{
               display: 'flex',

@@ -106,7 +106,7 @@ export const en = {
   status_completed: 'Service Completed',
   call_worker: 'Call Worker',
   worker_arriving_in: 'Estimated arrival in 12 minutes',
-  simulate_next_step: 'Simulate Next Progress Step (Demo Flow)',
+  advance_step: 'Update Service Progress Stage',
   
   // Completion & Feedback
   service_completed_title: 'Service Completed Successfully',
