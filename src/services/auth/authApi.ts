@@ -143,8 +143,9 @@ class AuthApiClient {
         city: dto.locality?.trim() || 'Bangalore',
       });
 
+      let workerRecord: any = null;
       if (userRole === 'worker') {
-        await this.ensureWorkerProfile(authUserId, {
+        workerRecord = await this.ensureWorkerProfile(authUserId, {
           name: profile.name,
           phone: formattedPhone,
           professions: dto.profession ? [dto.profession] : ['Electrician'],
@@ -162,13 +163,29 @@ class AuthApiClient {
         phone: cleanPhone,
         email: profile.email || dto.email?.trim() || undefined,
         role: userRole,
-        verificationStatus: 'VERIFIED',
+        verificationStatus: (workerRecord?.verification_status || (userRole === 'worker' ? 'PENDING' : 'VERIFIED')) as any,
         createdAt: profile.created_at || new Date().toISOString(),
+        dob: profile.dob || undefined,
+        gender: profile.gender || undefined,
+        address: profile.address || '',
+        locality: profile.locality || dto.locality?.trim() || undefined,
         city: profile.city || 'Bangalore',
-        zone: dto.locality?.trim() || 'Indiranagar & East Zone',
-        profession: dto.profession || (userRole === 'worker' ? 'Electrician' : undefined),
-        cooperativeBranch: dto.cooperativeBranch || (userRole === 'worker' ? 'Bangalore District Artisan Federation' : undefined),
-        experienceYears: dto.experienceYears || (userRole === 'worker' ? 5 : undefined),
+        state: profile.state || 'Karnataka',
+        pincode: profile.pincode || undefined,
+        preferredLanguage: profile.preferred_language || 'en',
+        emergencyContact: profile.emergency_contact || undefined,
+        savedAddresses: Array.isArray(profile.saved_addresses) ? profile.saved_addresses : [],
+        isProfileCompleted: profile.is_profile_completed ?? false,
+        zone: workerRecord?.zone || dto.locality?.trim() || 'Indiranagar & East Zone',
+        profession: workerRecord?.trade || dto.profession || (userRole === 'worker' ? 'Electrician' : undefined),
+        professions: workerRecord?.professions || (dto.profession ? [dto.profession] : ['Electrician']),
+        skills: workerRecord?.skills || dto.skills || [],
+        cooperativeBranch: workerRecord?.cooperative_branch || dto.cooperativeBranch || (userRole === 'worker' ? 'Bangalore District Artisan Federation' : undefined),
+        experienceYears: workerRecord?.experience_years || dto.experienceYears || (userRole === 'worker' ? 5 : undefined),
+        serviceRadiusKm: workerRecord?.service_radius_km || 10,
+        languages: workerRecord?.languages || ['English', 'Hindi'],
+        bio: workerRecord?.bio || '',
+        workExperience: workerRecord?.work_experience || '',
       };
 
       const session: AuthSession = {
@@ -418,10 +435,11 @@ class AuthApiClient {
           experience_years: workerData.experienceYears,
           experience_level: 'Intermediate',
           cooperative_branch: workerData.cooperativeName,
-          zone: workerData.zone || 'Noida Sector 62',
-          verification_status: 'VERIFIED',
+          zone: workerData.zone || 'Bangalore Central & East Zone',
+          verification_status: 'PENDING',
+          is_profile_completed: false,
           availability: workerData.availability || 'AVAILABLE',
-        },
+        } as any,
       ])
       .select()
       .maybeSingle();

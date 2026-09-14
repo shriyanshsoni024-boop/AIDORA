@@ -123,6 +123,9 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setWorker(current);
       setIsAvailableState(current.availability === 'AVAILABLE');
       setIsEmergencyAvailableState(current.emergencyAvailable !== false);
+      if (session?.user && session.role === 'worker' && current.isProfileCompleted === false) {
+        setShowOnboardingModal(true);
+      }
     }
     if (earningsRes.success && earningsRes.data) {
       setEarningsHistory(earningsRes.data);
@@ -291,7 +294,7 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const updated = {
       ...worker,
       ...data,
-      verificationStatus: 'VERIFIED' as const,
+      verificationStatus: data.verificationStatus || worker.verificationStatus || 'PENDING',
     };
     setWorker(updated);
     workerService.updateWorker(worker.id, updated);

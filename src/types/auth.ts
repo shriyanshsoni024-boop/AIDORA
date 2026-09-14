@@ -1,7 +1,7 @@
-import { Role, VerificationStatus } from './index';
+import { Role, VerificationStatus, SavedAddress } from './index';
 
 /**
- * SAHYOG Authentication User Model
+ * AIDORA Authentication User Model
  */
 export interface AuthUser {
   id: string;
@@ -14,12 +14,27 @@ export interface AuthUser {
   updatedAt?: string;
   avatar?: string;
   profileImage?: string;
+  dob?: string;
+  gender?: string;
   address?: string;
+  locality?: string;
   city?: string;
+  state?: string;
+  pincode?: string;
+  preferredLanguage?: 'en' | 'hi' | string;
+  emergencyContact?: string;
+  savedAddresses?: SavedAddress[];
+  isProfileCompleted?: boolean;
   zone?: string;
   profession?: string;
+  professions?: string[];
+  skills?: string[];
   cooperativeBranch?: string;
   experienceYears?: number;
+  serviceRadiusKm?: number;
+  languages?: string[];
+  bio?: string;
+  workExperience?: string;
 }
 
 /**

@@ -4,6 +4,8 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { LanguageToggle } from '../common/LanguageToggle';
 import {
   ShieldCheck,
+  ShieldAlert,
+  Clock,
   Award,
   Star,
   Edit3,
@@ -15,10 +17,14 @@ import {
   FilePlus,
   X,
   Send,
+  Camera,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getWorkerTheme } from '../../styles/workerThemes';
 import { welfareService, WelfareClaim, WelfareClaimType } from '../../services/welfareService';
+import { Avatar } from '../common/Avatar';
+import { photoStorageService } from '../../services/storage/photoStorageService';
 
 export const WorkerProfileView: React.FC = () => {
   const { logout } = useAuth();
@@ -31,6 +37,7 @@ export const WorkerProfileView: React.FC = () => {
     isEmergencyAvailable,
     setIsEmergencyAvailable,
     skillsMatrix,
+    updateOnboardingProfile,
   } = useWorker();
   const { language } = useLanguage();
 
@@ -43,6 +50,10 @@ export const WorkerProfileView: React.FC = () => {
   const [isSubmittingClaim, setIsSubmittingClaim] = React.useState(false);
   const [claimMsg, setClaimMsg] = React.useState('');
 
+  const [isUploadingPhoto, setIsUploadingPhoto] = React.useState(false);
+  const [photoError, setPhotoError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const loadClaims = React.useCallback(async () => {
     const res = await welfareService.getWelfareClaims(worker.id);
     if (res.success && res.data) {
@@ -53,6 +64,32 @@ export const WorkerProfileView: React.FC = () => {
   React.useEffect(() => {
     loadClaims();
   }, [loadClaims]);
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPhotoError(null);
+    const validation = photoStorageService.validatePhotoFile(file);
+    if (!validation.valid) {
+      setPhotoError(validation.error || 'Invalid photo format');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const uploadRes = await photoStorageService.uploadPhoto(file, 'worker', worker.id);
+      if (uploadRes.success && uploadRes.url) {
+        updateOnboardingProfile({ avatar: uploadRes.url });
+      } else {
+        setPhotoError(uploadRes.error || 'Failed to upload photo');
+      }
+    } catch {
+      setPhotoError('Error saving photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const handleClaimSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,6 +135,47 @@ export const WorkerProfileView: React.FC = () => {
 
   const verifiedSkillsCount = skillsMatrix.filter((s) => s.verified).length;
 
+  // Dynamic KYC status styling
+  const getKycBadge = () => {
+    const status = worker.verificationStatus || 'PENDING';
+    if (status === 'VERIFIED') {
+      return {
+        bg: '#ECFDF5',
+        text: '#059669',
+        border: '#A7F3D0',
+        label: 'KYC VERIFIED',
+        icon: <ShieldCheck size={11} strokeWidth={2.5} />,
+      };
+    }
+    if (status === 'UNDER_REVIEW') {
+      return {
+        bg: '#FEF3C7',
+        text: '#D97706',
+        border: '#FDE68A',
+        label: 'KYC UNDER REVIEW',
+        icon: <Clock size={11} strokeWidth={2.5} />,
+      };
+    }
+    if (status === 'REJECTED') {
+      return {
+        bg: '#FEF2F2',
+        text: '#DC2626',
+        border: '#FECACA',
+        label: 'KYC REJECTED',
+        icon: <ShieldAlert size={11} strokeWidth={2.5} />,
+      };
+    }
+    return {
+      bg: '#F1F5F9',
+      text: '#64748B',
+      border: '#CBD5E1',
+      label: 'KYC PENDING',
+      icon: <Clock size={11} strokeWidth={2.5} />,
+    };
+  };
+
+  const kyc = getKycBadge();
+
   return (
     <div
       style={{
@@ -121,61 +199,80 @@ export const WorkerProfileView: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ position: 'relative' }}>
-            <img
+          {/* Avatar with Camera Upload Trigger */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <Avatar
               src={worker.avatar}
-              alt={worker.name}
-              style={{
-                width: '68px',
-                height: '68px',
-                borderRadius: '20px',
-                objectFit: 'cover',
-                border: `2.5px solid ${theme.primary}`,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              }}
+              name={worker.name}
+              size={68}
+              shape="rounded"
+              ringColor={theme.primary}
             />
-            <span
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePhotoSelect}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              style={{ display: 'none' }}
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingPhoto}
+              title="Upload profile photo"
               style={{
                 position: 'absolute',
                 bottom: '-4px',
                 right: '-4px',
-                backgroundColor: '#10B981',
+                backgroundColor: theme.primary || '#1DAA5C',
                 color: '#FFFFFF',
-                width: '20px',
-                height: '20px',
+                width: '24px',
+                height: '24px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: '2px solid #FFFFFF',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
               }}
             >
-              <ShieldCheck size={12} strokeWidth={3} />
-            </span>
+              {isUploadingPhoto ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <Camera size={12} strokeWidth={2.5} />
+              )}
+            </button>
           </div>
 
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '1.1875rem', fontWeight: 900, color: '#0F172A', margin: 0 }}>
+              <h2 style={{ fontSize: '1.1875rem', fontWeight: 900, color: '#0F172A', margin: 0, wordBreak: 'break-word' }}>
                 {worker.name}
               </h2>
               <span
                 style={{
                   fontSize: '0.625rem',
                   fontWeight: 800,
-                  backgroundColor: '#ECFDF5',
-                  color: '#1DAA5C',
+                  backgroundColor: kyc.bg,
+                  color: kyc.text,
                   padding: '2px 7px',
                   borderRadius: '9999px',
-                  border: '1px solid #A7F3D0',
+                  border: `1px solid ${kyc.border}`,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
                 }}
               >
-                KYC VERIFIED
+                {kyc.icon}
+                {kyc.label}
               </span>
             </div>
 
             <div style={{ fontSize: '0.8125rem', color: theme.primaryDark, fontWeight: 700, marginTop: '2px' }}>
-              {worker.professions.join(' • ')}
+              {worker.professions.join(' • ') || 'Artisan Specialist'}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -193,7 +290,7 @@ export const WorkerProfileView: React.FC = () => {
                 }}
               >
                 <Star size={11} fill="#D97706" color="#D97706" />
-                {worker.rating || 5.0} ({worker.reviewCount || 0} reviews)
+                {worker.rating ? worker.rating.toFixed(1) : '5.0'} ({worker.reviewCount || 0} reviews)
               </span>
               <span style={{ fontSize: '0.6875rem', color: '#64748B', fontWeight: 600 }}>
                 • {worker.experienceYears || 1}+ Yrs Exp • {worker.completedJobs || 0} Jobs Done
@@ -201,6 +298,12 @@ export const WorkerProfileView: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {photoError && (
+          <div style={{ fontSize: '0.6875rem', color: '#DC2626', backgroundColor: '#FEF2F2', padding: '6px 10px', borderRadius: '8px' }}>
+            {photoError}
+          </div>
+        )}
 
         {/* Contact & Zone Strip */}
         <div
@@ -214,12 +317,16 @@ export const WorkerProfileView: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#475569' }}>
             <Phone size={14} color="#64748B" />
-            <span style={{ fontWeight: 600 }}>{worker.phone || 'Registered Phone'}</span>
+            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {worker.phone || 'Registered Phone'}
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#475569' }}>
             <MapPin size={14} color="#64748B" />
-            <span style={{ fontWeight: 600 }}>{worker.zone || 'Bangalore Urban'}</span>
+            <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {worker.locality || worker.city || worker.zone || 'Operating Hub'}
+            </span>
           </div>
         </div>
 
@@ -275,16 +382,34 @@ export const WorkerProfileView: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>Artisan Guild:</span>
             <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A' }}>
-              {worker.cooperativeName || 'Noida District Artisan Federation'}
+              {worker.cooperativeName || 'District Artisan Cooperative Society'}
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>National Aadhaar:</span>
             <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
-              {worker.aadhaarNumber || 'XXXX-XXXX-8921'} (Verified)
+              {worker.aadhaarNumber ? `${worker.aadhaarNumber.substring(0, 4)}-XXXX-${worker.aadhaarNumber.slice(-4)}` : 'Verified on File'}
             </span>
           </div>
+
+          {worker.serviceRadiusKm && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>Service Radius:</span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A' }}>
+                {worker.serviceRadiusKm} km coverage
+              </span>
+            </div>
+          )}
+
+          {worker.languages && worker.languages.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>Languages:</span>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0F172A' }}>
+                {worker.languages.join(', ')}
+              </span>
+            </div>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.8125rem', color: '#475569', fontWeight: 600 }}>Skill Matrix Badges:</span>

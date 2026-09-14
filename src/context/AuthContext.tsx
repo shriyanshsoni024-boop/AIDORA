@@ -150,19 +150,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             workerData = w;
           }
 
+          const p = profile as any;
           const authUser: AuthUser = {
             id: profile.id,
             name: profile.name,
             phone: profile.phone,
             email: profile.email || undefined,
             role: userRole,
-            verificationStatus: (workerData?.verification_status || 'VERIFIED') as any,
+            verificationStatus: (workerData?.verification_status || (userRole === 'worker' ? 'PENDING' : 'VERIFIED')) as any,
             createdAt: profile.created_at,
-            zone: workerData?.zone || profile.city,
+            dob: p.dob || undefined,
+            gender: p.gender || undefined,
+            address: profile.address || '',
+            locality: p.locality || undefined,
+            city: profile.city || 'Bangalore',
+            state: p.state || 'Karnataka',
+            pincode: p.pincode || undefined,
+            preferredLanguage: p.preferred_language || 'en',
+            emergencyContact: p.emergency_contact || undefined,
+            savedAddresses: Array.isArray(p.saved_addresses) ? p.saved_addresses : [],
+            isProfileCompleted: p.is_profile_completed ?? false,
+            zone: workerData?.zone || p.locality || profile.city,
             profession: workerData?.trade || workerData?.professions?.[0],
+            professions: workerData?.professions || (workerData?.trade ? [workerData.trade] : undefined),
+            skills: workerData?.skills || [],
             cooperativeBranch: workerData?.cooperative_branch,
             experienceYears: workerData?.experience_years,
+            serviceRadiusKm: workerData?.service_radius_km || 10,
+            languages: workerData?.languages || ['English', 'Hindi'],
+            bio: workerData?.bio || '',
+            workExperience: workerData?.work_experience || '',
             avatar: workerData?.avatar || profile.avatar_url || undefined,
+            profileImage: profile.avatar_url || workerData?.avatar || undefined,
           };
 
           const newSession: AuthSession = {

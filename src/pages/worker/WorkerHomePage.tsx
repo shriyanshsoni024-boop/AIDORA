@@ -11,6 +11,8 @@ import { CertificateModal } from '../../components/worker/CertificateModal';
 import { WorkerOnboardingModal } from '../../components/worker/WorkerOnboardingModal';
 import {
   ShieldCheck,
+  ShieldAlert,
+  Clock,
   Power,
   Award,
   MapPin,
@@ -22,6 +24,7 @@ import {
   Star,
 } from 'lucide-react';
 import { getWorkerTheme } from '../../styles/workerThemes';
+import { Avatar } from '../../components/common/Avatar';
 
 export const WorkerHomePage: React.FC = () => {
   const {
@@ -389,47 +392,98 @@ export const WorkerHomePage: React.FC = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img
+                  <Avatar
                     src={worker.avatar}
-                    alt={worker.name}
-                    style={{
-                      width: '54px',
-                      height: '54px',
-                      borderRadius: '16px',
-                      objectFit: 'cover',
-                      border: '2px solid rgba(255, 255, 255, 0.6)',
-                      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.15)',
-                    }}
+                    name={worker.name}
+                    size={54}
+                    shape="rounded"
+                    ringColor="rgba(255, 255, 255, 0.6)"
                   />
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                       <h1 style={{ fontSize: '1.125rem', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>
                         {worker.name}
                       </h1>
-                      <span
-                        style={{
-                          fontSize: '0.5625rem',
-                          fontWeight: 800,
-                          backgroundColor: 'rgba(16, 185, 129, 0.3)',
-                          color: '#A7F3D0',
-                          padding: '2px 6px',
-                          borderRadius: '9999px',
-                          border: '1px solid rgba(167, 243, 208, 0.4)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '2px',
-                        }}
-                      >
-                        <ShieldCheck size={10} />
-                        KYC VERIFIED
-                      </span>
+                      {worker.verificationStatus === 'VERIFIED' ? (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            fontWeight: 800,
+                            backgroundColor: 'rgba(16, 185, 129, 0.3)',
+                            color: '#A7F3D0',
+                            padding: '2px 6px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(167, 243, 208, 0.4)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                        >
+                          <ShieldCheck size={10} />
+                          KYC VERIFIED
+                        </span>
+                      ) : worker.verificationStatus === 'UNDER_REVIEW' ? (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            fontWeight: 800,
+                            backgroundColor: 'rgba(245, 158, 11, 0.3)',
+                            color: '#FDE68A',
+                            padding: '2px 6px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(253, 230, 138, 0.4)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                        >
+                          <Clock size={10} />
+                          KYC UNDER REVIEW
+                        </span>
+                      ) : worker.verificationStatus === 'REJECTED' ? (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            fontWeight: 800,
+                            backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                            color: '#FECACA',
+                            padding: '2px 6px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(254, 202, 202, 0.4)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                        >
+                          <ShieldAlert size={10} />
+                          KYC REJECTED
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: '0.5625rem',
+                            fontWeight: 800,
+                            backgroundColor: 'rgba(148, 163, 184, 0.25)',
+                            color: '#E2E8F0',
+                            padding: '2px 6px',
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(226, 232, 240, 0.3)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                          }}
+                        >
+                          <Clock size={10} />
+                          KYC PENDING
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.85)', marginTop: '2px', fontWeight: 600 }}>
-                      {worker.professions.join(' • ')}
+                      {worker.professions.join(' • ') || 'Artisan Specialist'}
                     </div>
                     <div style={{ fontSize: '0.6875rem', color: 'rgba(255, 255, 255, 0.7)', marginTop: '1px' }}>
-                      {worker.zone} • {worker.cooperativeName}
+                      {worker.locality || worker.city || worker.zone || 'Local Hub'} • {worker.cooperativeName || 'Cooperative Society'}
                     </div>
                   </div>
                 </div>

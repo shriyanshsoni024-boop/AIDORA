@@ -1,47 +1,70 @@
 import React, { useState } from 'react';
-import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Gift, ShieldCheck, CreditCard, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Gift, ShieldCheck, CheckCircle2, History } from 'lucide-react';
+import { useBooking } from '../../context/BookingContext';
+import { storageService } from '../../services/storage/storageService';
+
+const STORAGE_WALLET_BALANCE = 'sahyog_customer_wallet_balance';
+const STORAGE_WALLET_TXS = 'sahyog_customer_wallet_txs';
+
+interface WalletTx {
+  id: string;
+  title: string;
+  subtitle: string;
+  date: string;
+  amount: string;
+  isCredit: boolean;
+  tag: string;
+}
 
 export const CustomerMoneyPage: React.FC = () => {
-  const [balance, setBalance] = useState<number>(450);
+  const { bookings } = useBooking();
+  const [balance, setBalance] = useState<number>(() => {
+    return storageService.getItem<number>(STORAGE_WALLET_BALANCE, 0);
+  });
+  const [customTransactions, setCustomTransactions] = useState<WalletTx[]>(() => {
+    return storageService.getItem<WalletTx[]>(STORAGE_WALLET_TXS, []);
+  });
+
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [showPassModal, setShowPassModal] = useState<boolean>(false);
   const [addAmount, setAddAmount] = useState<string>('500');
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
-  const transactions = [
-    {
-      id: 'tx-1',
-      title: 'Cooperative Cashback Bonus',
-      subtitle: 'Electrical Wiring Booking #SYH-48291',
-      date: 'Today, 2:45 PM',
-      amount: '+₹50',
-      isCredit: true,
-      tag: 'CASHBACK',
-    },
-    {
-      id: 'tx-2',
-      title: 'Paid for Bathroom Cleaning',
-      subtitle: 'Booking #SYH-39104 (Ramesh Kumar)',
-      date: 'Yesterday, 11:20 AM',
-      amount: '-₹399',
+  // Derive booking payments into transaction records
+  const bookingTransactions: WalletTx[] = bookings
+    .filter((b) => b.paymentStatus === 'PAID')
+    .map((b) => ({
+      id: `tx-b-${b.id}`,
+      title: `Service Payment: ${b.serviceName}`,
+      subtitle: `Booking #${b.token || b.id.slice(-6)} • ${b.worker?.name || 'Assigned Artisan'}`,
+      date: new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+      amount: `-₹${b.totalPrice}`,
       isCredit: false,
       tag: 'BOOKING',
-    },
-    {
-      id: 'tx-3',
-      title: 'Welcome Referral Credit',
-      subtitle: 'Joined via AIDORA Member invite',
-      date: '05 Sep 2026',
-      amount: '+₹100',
-      isCredit: true,
-      tag: 'REFERRAL',
-    },
-  ];
+    }));
+
+  const allTransactions = [...customTransactions, ...bookingTransactions];
 
   const handleAddCredits = () => {
     const val = parseInt(addAmount, 10);
     if (val > 0) {
-      setBalance((prev) => prev + val);
+      const newBal = balance + val;
+      setBalance(newBal);
+      storageService.setItem(STORAGE_WALLET_BALANCE, newBal);
+
+      const newTx: WalletTx = {
+        id: `tx-add-${Date.now()}`,
+        title: 'Wallet Top-up (UPI / NetBanking)',
+        subtitle: 'Instant Credit Added',
+        date: 'Today, Just now',
+        amount: `+₹${val}`,
+        isCredit: true,
+        tag: 'TOPUP',
+      };
+
+      const updated = [newTx, ...customTransactions];
+      setCustomTransactions(updated);
+      storageService.setItem(STORAGE_WALLET_TXS, updated);
       setShowAddModal(false);
     }
   };
@@ -252,7 +275,7 @@ export const CustomerMoneyPage: React.FC = () => {
         </button>
       </div>
 
-      {/* 4. Recent Transactions */}
+      {/* 4. Recent Activity & Transactions */}
       <div
         style={{
           backgroundColor: '#FFFFFF',
@@ -264,133 +287,85 @@ export const CustomerMoneyPage: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <span style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--sahyog-ink, #0B0B0B)' }}>
-            Recent Activity & Pass
-          </span>
-          <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--sahyog-green, #1DAA5C)' }}>
-            View All
+            Recent Transactions ({allTransactions.length})
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: '10px',
-                borderBottom: '1px solid #F1F5F9',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    backgroundColor: tx.isCredit ? '#F0FDF4' : '#FEE2E2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: tx.isCredit ? 'var(--sahyog-green, #1DAA5C)' : 'var(--sahyog-red, #E0472C)',
-                  }}
-                >
-                  {tx.isCredit ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
-                </div>
-
-                <div>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--sahyog-ink, #0B0B0B)' }}>
-                    {tx.title}
-                  </div>
-                  <div style={{ fontSize: '0.6875rem', color: '#64748B' }}>
-                    {tx.subtitle} • {tx.date}
-                  </div>
-                </div>
-              </div>
-
+        {allTransactions.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {allTransactions.map((tx) => (
               <div
+                key={tx.id}
                 style={{
-                  fontSize: '0.875rem',
-                  fontWeight: 800,
-                  color: tx.isCredit ? 'var(--sahyog-green, #1DAA5C)' : 'var(--sahyog-ink, #0B0B0B)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '10px',
+                  borderBottom: '1px solid #F1F5F9',
                 }}
               >
-                {tx.amount}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      backgroundColor: tx.isCredit ? '#F0FDF4' : '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: tx.isCredit ? 'var(--sahyog-green, #1DAA5C)' : 'var(--sahyog-red, #E0472C)',
+                    }}
+                  >
+                    {tx.isCredit ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--sahyog-ink, #0B0B0B)' }}>
+                      {tx.title}
+                    </div>
+                    <div style={{ fontSize: '0.6875rem', color: '#64748B' }}>
+                      {tx.subtitle} • {tx.date}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 800,
+                    color: tx.isCredit ? 'var(--sahyog-green, #1DAA5C)' : 'var(--sahyog-ink, #0B0B0B)',
+                  }}
+                >
+                  {tx.amount}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Saved Payment Methods */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '18px',
-          border: '1px solid var(--sahyog-sage, #D9E9C8)',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-        }}
-      >
-        <div style={{ fontSize: '0.875rem', fontWeight: 800, color: 'var(--sahyog-ink, #0B0B0B)', marginBottom: '12px' }}>
-          Linked Payment Options
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            ))}
+          </div>
+        ) : (
           <div
             style={{
+              padding: '24px 16px',
+              textAlign: 'center',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 12px',
-              backgroundColor: '#F8FAFC',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
+              gap: '8px',
+              color: '#64748B',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ fontSize: '1.25rem' }}>📱</div>
-              <div>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--sahyog-ink, #0B0B0B)' }}>
-                  UPI / GPay / PhonePe
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: '#64748B' }}>
-                  Primary instant payment mode
-                </div>
-              </div>
+            <History size={28} color="#94A3B8" />
+            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#334155' }}>
+              No transactions yet
             </div>
-            <CheckCircle2 size={16} color="var(--sahyog-green, #1DAA5C)" />
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 12px',
-              backgroundColor: '#F8FAFC',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CreditCard size={18} color="#64748B" />
-              <div>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--sahyog-ink, #0B0B0B)' }}>
-                  Debit / Credit Card
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: '#64748B' }}>
-                  Visa / Mastercard / RuPay
-                </div>
-              </div>
+            <div style={{ fontSize: '0.75rem', maxWidth: '240px' }}>
+              Your booking payment receipts, refunds, and cooperative pass savings will appear here.
             </div>
-            <ChevronRight size={16} color="#94A3B8" />
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Add Money Modal */}
+      {/* 5. Add Money Modal */}
       {showAddModal && (
         <div
           className="animate-backdrop"
@@ -398,47 +373,43 @@ export const CustomerMoneyPage: React.FC = () => {
             position: 'fixed',
             inset: 0,
             zIndex: 1000,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            backdropFilter: 'blur(6px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             display: 'flex',
-            alignItems: 'flex-end',
+            alignItems: 'center',
             justifyContent: 'center',
+            padding: '20px',
           }}
           onClick={() => setShowAddModal(false)}
         >
           <div
-            className="animate-slide-up"
+            className="animate-scale-in"
             style={{
-              width: '100%',
-              maxWidth: '480px',
               backgroundColor: '#FFFFFF',
-              borderRadius: '24px 24px 0 0',
-              padding: '24px 20px 36px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '380px',
+              width: '100%',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--sahyog-ink, #0B0B0B)', margin: 0 }}>
-              Add AIDORA Wallet Balance
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', margin: '0 0 12px' }}>
+              Add Money to AIDORA Wallet
             </h3>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['200', '500', '1000', '2000'].map((amt) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+              {['200', '500', '1000'].map((amt) => (
                 <button
                   key={amt}
                   type="button"
                   onClick={() => setAddAmount(amt)}
                   style={{
-                    flex: 1,
                     padding: '8px',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     border: `1.5px solid ${addAmount === amt ? 'var(--sahyog-green, #1DAA5C)' : '#E2E8F0'}`,
                     backgroundColor: addAmount === amt ? '#F0FDF4' : '#FFFFFF',
-                    color: addAmount === amt ? 'var(--sahyog-green, #1DAA5C)' : '#0F172A',
-                    fontSize: '0.8125rem',
-                    fontWeight: 700,
+                    color: addAmount === amt ? 'var(--sahyog-green-dark, #0F7A3E)' : '#334155',
+                    fontSize: '0.875rem',
+                    fontWeight: 800,
                     cursor: 'pointer',
                   }}
                 >
@@ -447,112 +418,112 @@ export const CustomerMoneyPage: React.FC = () => {
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddCredits}
+            <input
+              type="number"
+              value={addAmount}
+              onChange={(e) => setAddAmount(e.target.value)}
+              placeholder="Enter custom amount"
               style={{
                 width: '100%',
-                padding: '14px',
-                backgroundColor: 'var(--sahyog-green, #1DAA5C)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '0.9375rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                marginTop: '8px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1.5px solid #CBD5E1',
+                fontSize: '1rem',
+                fontWeight: 700,
+                marginBottom: '16px',
               }}
-              className="sahyog-btn"
-            >
-              Add ₹{addAmount} via UPI
-            </button>
+            />
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  backgroundColor: '#F1F5F9',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCredits}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  backgroundColor: 'var(--sahyog-green, #1DAA5C)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.875rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Add ₹{addAmount}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Redeem Pass / Voucher Modal */}
+      {/* 6. Redeem Pass Modal */}
       {showPassModal && (
         <div
           className="animate-backdrop"
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 100,
-            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            zIndex: 1000,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '16px',
-            backdropFilter: 'blur(4px)',
+            padding: '20px',
           }}
           onClick={() => setShowPassModal(false)}
         >
           <div
-            className="animate-modal-enter"
+            className="animate-scale-in"
             style={{
-              width: '100%',
-              maxWidth: '420px',
               backgroundColor: '#FFFFFF',
               borderRadius: '20px',
-              padding: '24px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              padding: '24px',
+              maxWidth: '380px',
+              width: '100%',
+              textAlign: 'center',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Gift size={22} color="var(--sahyog-green, #1DAA5C)" />
-              <h3 style={{ fontSize: '1.0625rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                Cooperative Voucher & Member Pass
-              </h3>
-            </div>
-
-            <p style={{ fontSize: '0.8125rem', color: '#64748B', lineHeight: 1.5, margin: 0 }}>
-              AIDORA Cooperative member vouchers and referral discounts are auto-applied at checkout for zero corporate surcharge services.
+            <CheckCircle2 size={40} color="var(--sahyog-green, #1DAA5C)" style={{ margin: '0 auto 12px' }} />
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>
+              AIDORA Pass Active
+            </h3>
+            <p style={{ fontSize: '0.8125rem', color: '#64748B', lineHeight: 1.5, margin: '0 0 16px' }}>
+              Your account has complimentary zero-brokerage platform access activated. You enjoy ₹0 platform fees on all verified cooperative technician requests.
             </p>
-
-            <div
-              style={{
-                backgroundColor: '#F8FAFC',
-                border: '1px dashed #CBD5E1',
-                borderRadius: '12px',
-                padding: '12px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0F172A' }}>
-                  ACTIVE PASS: COOP2026
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: '#1DAA5C', fontWeight: 700 }}>
-                  ₹50 Off Next Service Booking
-                </div>
-              </div>
-              <span style={{ fontSize: '0.625rem', fontWeight: 800, backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '6px' }}>
-                READY
-              </span>
-            </div>
-
             <button
               type="button"
               onClick={() => setShowPassModal(false)}
               style={{
                 width: '100%',
-                padding: '12px',
+                padding: '10px',
                 backgroundColor: 'var(--sahyog-green, #1DAA5C)',
                 color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: '10px',
                 fontSize: '0.875rem',
                 fontWeight: 800,
                 cursor: 'pointer',
               }}
             >
-              Got it
+              Great, got it!
             </button>
           </div>
         </div>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useBooking } from '../../context/BookingContext';
+import { useAuth } from '../../context/AuthContext';
 import { SERVICE_CATEGORIES } from '../../data/services';
 import { PRONTO_SERVICES } from '../../data/prontoServicesData';
 import { CategoryTabsBar } from '../../components/customer/CategoryTabsBar';
 import { ProntoServiceCard, ServiceItemData } from '../../components/customer/ProntoServiceCard';
 import { AddressSelectorModal } from '../../components/customer/AddressSelectorModal';
+import { Avatar } from '../../components/common/Avatar';
 import { getCategoryTheme, CategoryTheme } from '../../styles/categoryThemes';
 import { Search, X, Mic, MapPin, ChevronDown, Wallet, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
 
@@ -13,6 +15,7 @@ interface CustomerHomePageProps {
 }
 
 export const CustomerHomePage: React.FC<CustomerHomePageProps> = ({ onOpenOnboarding }) => {
+  const { user } = useAuth();
   const {
     startServiceBooking,
     setProblemDescription,
@@ -181,15 +184,17 @@ export const CustomerHomePage: React.FC<CustomerHomePageProps> = ({ onOpenOnboar
                 color: 'var(--sahyog-ink, #0B0B0B)',
                 cursor: 'pointer',
                 overflow: 'hidden',
+                padding: 0,
                 transition: 'all 120ms ease',
               }}
               className="sahyog-btn"
               aria-label="Open Profile"
             >
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                alt="User Profile"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              <Avatar
+                src={user?.profileImage || user?.avatar}
+                name={user?.name || 'Customer'}
+                size={36}
+                shape="rounded"
               />
             </button>
           </div>

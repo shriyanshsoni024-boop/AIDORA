@@ -50,26 +50,56 @@ export interface WorkerCertificate {
   isDemo?: boolean;
 }
 
+export interface SavedAddress {
+  id: string;
+  label: 'Home' | 'Work' | 'Other' | string;
+  name?: string;
+  flat?: string;
+  building?: string;
+  fullAddress: string;
+  locality: string;
+  city: string;
+  state: string;
+  pincode: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  isDefault?: boolean;
+}
+
 export interface Worker {
   id: string;
   name: string;
   nameHi: string;
   phone: string;
+  email?: string;
   avatar: string;
+  dob?: string;
+  gender?: string;
+  address?: string;
+  locality?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   professions: string[];
   skills: string[];
   experienceYears: number;
   experienceLevel: 'Beginner' | 'Intermediate' | 'Advanced';
+  serviceRadiusKm?: number;
   rating: number;
   reviewCount: number;
   completedJobs: number;
   distanceKm: number;
   availability: WorkerAvailability;
   emergencyAvailable?: boolean;
+  languages?: string[];
+  bio?: string;
+  workExperience?: string;
   verificationStatus: VerificationStatus;
   cooperativeName: string;
   zone: string;
   aadhaarNumber?: string;
+  isProfileCompleted?: boolean;
   certificates: {
     title: string;
     issuer: string;
@@ -194,8 +224,18 @@ export interface User {
   email?: string;
   role: Role;
   address: string;
+  locality?: string;
   city: string;
+  state?: string;
+  pincode?: string;
+  dob?: string;
+  gender?: string;
+  preferredLanguage?: 'en' | 'hi' | string;
+  emergencyContact?: string;
+  savedAddresses?: SavedAddress[];
+  isProfileCompleted?: boolean;
   profileImage?: string;
+  avatar?: string;
   createdAt?: string;
   updatedAt?: string;
 }

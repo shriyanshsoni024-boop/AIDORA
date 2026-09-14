@@ -77,17 +77,33 @@ const mapRowToBooking = (
 
 class BookingService {
   /**
-   * Fetch all bookings from Supabase (with fallback to local storage)
+   * Fetch bookings from Supabase (filtered by user if authenticated)
    */
-  public async getBookings(): Promise<ApiResponse<Booking[]>> {
+  public async getBookings(customerId?: string, workerId?: string): Promise<ApiResponse<Booking[]>> {
     if (isSupabaseConfigured()) {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('bookings')
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (customerId) {
+          query = query.or(`customer_id.eq.${customerId}`);
+        } else if (workerId) {
+          query = query.or(`worker_id.eq.${workerId}`);
+        }
+
+        const { data, error } = await query;
+
+        if (!error && data) {
+          if (data.length === 0) {
+            return {
+              success: true,
+              data: [],
+              message: 'No bookings found for user.',
+            };
+          }
+
           const bookingRows = data as unknown as BookingRow[];
           const bookingIds = bookingRows.map((b) => b.id);
           const workerIds = Array.from(new Set(bookingRows.map((b) => b.worker_id).filter(Boolean))) as string[];
@@ -119,7 +135,7 @@ class BookingService {
             });
           }
 
-          const localCached = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+          const localCached = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, []);
 
           const bookings: Booking[] = bookingRows.map((row) => {
             const hist = historyByBooking[row.id] || [];
@@ -144,7 +160,12 @@ class BookingService {
     }
 
     try {
-      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+      let bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, []);
+      if (customerId) {
+        bookings = bookings.filter((b) => b.customerId === customerId);
+      } else if (workerId) {
+        bookings = bookings.filter((b) => b.worker?.id === workerId);
+      }
       return {
         success: true,
         data: bookings,

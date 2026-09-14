@@ -10,11 +10,25 @@ import {
 import { STORAGE_KEYS } from './storage/storageKeys';
 import { storageService } from './storage/storageService';
 import { MOCK_WORKERS } from '../data/workers';
-import { TRAINING_MODULES, INITIAL_SKILLS_MATRIX, MOCK_EARNINGS_HISTORY } from '../data/workerTrainingData';
+import { TRAINING_MODULES, INITIAL_SKILLS_MATRIX } from '../data/workerTrainingData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Database } from '../types/database';
 
-type WorkerRow = Database['public']['Tables']['workers']['Row'];
+type WorkerRow = Database['public']['Tables']['workers']['Row'] & {
+  dob?: string | null;
+  gender?: string | null;
+  email?: string | null;
+  address?: string | null;
+  locality?: string | null;
+  city?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  service_radius_km?: number | null;
+  languages?: string[] | null;
+  bio?: string | null;
+  work_experience?: string | null;
+  is_profile_completed?: boolean | null;
+};
 type WorkerEarningsRow = Database['public']['Tables']['worker_earnings']['Row'];
 
 export const mapRowToWorker = (row: WorkerRow): Worker => {
@@ -23,21 +37,34 @@ export const mapRowToWorker = (row: WorkerRow): Worker => {
     name: row.name,
     nameHi: row.name_hi || row.name,
     phone: row.phone,
-    avatar: row.avatar || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=150',
+    email: row.email || undefined,
+    avatar: row.avatar || '',
+    dob: row.dob || undefined,
+    gender: row.gender || undefined,
+    address: row.address || '',
+    locality: row.locality || undefined,
+    city: row.city || 'Bangalore',
+    state: row.state || 'Karnataka',
+    pincode: row.pincode || undefined,
     professions: row.professions && row.professions.length > 0 ? row.professions : [row.trade || 'Electrician'],
     skills: row.skills || [],
     experienceYears: row.experience_years || 1,
     experienceLevel: row.experience_level || 'Intermediate',
+    serviceRadiusKm: row.service_radius_km || 10,
     rating: Number(row.rating) || 5.0,
     reviewCount: row.review_count || 0,
     completedJobs: row.completed_jobs || 0,
     distanceKm: Number(row.distance_km) || 1.0,
     availability: row.availability || 'AVAILABLE',
     emergencyAvailable: row.emergency_ready ?? false,
+    languages: Array.isArray(row.languages) ? row.languages : ['English', 'Hindi'],
+    bio: row.bio || '',
+    workExperience: row.work_experience || '',
     verificationStatus: row.verification_status || 'PENDING',
     cooperativeName: row.cooperative_branch || 'AIDORA Central Federation',
     zone: row.zone || 'Zone 1 - Central',
     aadhaarNumber: row.aadhaar_masked || undefined,
+    isProfileCompleted: row.is_profile_completed ?? false,
     certificates: (Array.isArray(row.certificates_data) ? row.certificates_data : []) as Worker['certificates'],
     trainingCompleted: row.training_completed || [],
   };
@@ -79,7 +106,6 @@ class WorkerService {
   public async getWorkerById(workerId: string): Promise<ApiResponse<Worker>> {
     if (isSupabaseConfigured() && workerId) {
       try {
-        // Try match by id or profile_id
         const { data, error } = await supabase
           .from('workers')
           .select('*')
@@ -139,11 +165,25 @@ class WorkerService {
   public async updateWorker(workerId: string, updates: Partial<Worker>): Promise<ApiResponse<Worker>> {
     if (isSupabaseConfigured() && workerId) {
       try {
-        const dbUpdates: Partial<Database['public']['Tables']['workers']['Update']> = {};
+        const dbUpdates: Record<string, any> = {};
         if (updates.name !== undefined) dbUpdates.name = updates.name;
         if (updates.nameHi !== undefined) dbUpdates.name_hi = updates.nameHi;
         if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
         if (updates.avatar !== undefined) dbUpdates.avatar = updates.avatar;
+        if (updates.dob !== undefined) dbUpdates.dob = updates.dob;
+        if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
+        if (updates.address !== undefined) dbUpdates.address = updates.address;
+        if (updates.locality !== undefined) dbUpdates.locality = updates.locality;
+        if (updates.city !== undefined) dbUpdates.city = updates.city;
+        if (updates.state !== undefined) dbUpdates.state = updates.state;
+        if (updates.pincode !== undefined) dbUpdates.pincode = updates.pincode;
+        if (updates.serviceRadiusKm !== undefined) dbUpdates.service_radius_km = updates.serviceRadiusKm;
+        if (updates.languages !== undefined) dbUpdates.languages = updates.languages;
+        if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
+        if (updates.workExperience !== undefined) dbUpdates.work_experience = updates.workExperience;
+        if (updates.isProfileCompleted !== undefined) dbUpdates.is_profile_completed = updates.isProfileCompleted;
+
         if (updates.professions !== undefined) {
           dbUpdates.professions = updates.professions;
           if (updates.professions.length > 0) dbUpdates.trade = updates.professions[0];
@@ -165,7 +205,7 @@ class WorkerService {
 
         const { data, error } = await supabase
           .from('workers')
-          .update(dbUpdates)
+          .update(dbUpdates as any)
           .or(`id.eq.${workerId},profile_id.eq.${workerId}`)
           .select()
           .maybeSingle();
@@ -229,8 +269,8 @@ class WorkerService {
 
         const { data, error } = await query;
 
-        if (!error && data && data.length > 0) {
-          const rows = data as unknown as WorkerEarningsRow[];
+        if (!error) {
+          const rows = (data || []) as unknown as WorkerEarningsRow[];
           const earnings: WorkerEarningsRecord[] = rows.map((row) => ({
             id: row.id,
             bookingToken: row.booking_token,
@@ -251,10 +291,7 @@ class WorkerService {
     }
 
     try {
-      const earnings = storageService.getItem<WorkerEarningsRecord[]>(
-        STORAGE_KEYS.EARNINGS,
-        MOCK_EARNINGS_HISTORY
-      );
+      const earnings = storageService.getItem<WorkerEarningsRecord[]>(STORAGE_KEYS.EARNINGS, []);
       return { success: true, data: earnings };
     } catch (err) {
       return { success: false, error: 'Failed to retrieve earnings' };
@@ -270,7 +307,6 @@ class WorkerService {
   ): Promise<ApiResponse<WorkerEarningsRecord>> {
     if (isSupabaseConfigured()) {
       try {
-        // Resolve valid worker UUID if needed
         let resolvedWorkerId = workerId;
         const { data: wRecord } = await supabase
           .from('workers')
@@ -280,7 +316,6 @@ class WorkerService {
 
         if (wRecord) {
           resolvedWorkerId = wRecord.id;
-          // Increment completed jobs on worker
           await supabase
             .from('workers')
             .update({ completed_jobs: (wRecord.completed_jobs || 0) + 1 })
@@ -341,7 +376,7 @@ class WorkerService {
   private syncLocalEarnings(newRecord: WorkerEarningsRecord, workerId: string): void {
     const earnings = storageService.getItem<WorkerEarningsRecord[]>(
       STORAGE_KEYS.EARNINGS,
-      MOCK_EARNINGS_HISTORY
+      []
     );
     const updatedEarnings = [newRecord, ...earnings];
     storageService.setItem(STORAGE_KEYS.EARNINGS, updatedEarnings);
@@ -443,17 +478,14 @@ class WorkerService {
         isDemo: true,
       };
 
-      // 1. Mark training module as completed
       const updatedModules = modules.map((m) =>
         m.id === moduleId ? { ...m, completed: true, score } : m
       );
       storageService.setItem(STORAGE_KEYS.TRAINING_MODULES, updatedModules);
 
-      // 2. Add certificate to list
       const certs = storageService.getItem<WorkerCertificate[]>(STORAGE_KEYS.CERTIFICATES, []);
       storageService.setItem(STORAGE_KEYS.CERTIFICATES, [newCert, ...certs]);
 
-      // 3. Update skills matrix
       const skills = storageService.getItem<SkillItem[]>(
         STORAGE_KEYS.SKILLS_MATRIX,
         INITIAL_SKILLS_MATRIX
@@ -472,7 +504,6 @@ class WorkerService {
       });
       storageService.setItem(STORAGE_KEYS.SKILLS_MATRIX, updatedSkills);
 
-      // 4. Update worker profile certifications & training
       const updatedCertList = [
         ...currentWorker.certificates,
         {
@@ -496,7 +527,6 @@ class WorkerService {
         storageService.setItem(STORAGE_KEYS.WORKERS, workers);
       }
 
-      // 5. Persist to Supabase if configured
       if (isSupabaseConfigured() && workerId) {
         supabase
           .from('workers')

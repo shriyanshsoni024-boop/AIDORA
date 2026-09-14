@@ -1,23 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useWorker } from '../../context/WorkerContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { TRADE_SKILLS_BY_PROFESSION } from '../../data/workerTrainingData';
 import { adminService } from '../../services/adminService';
 import { kycService } from '../../services/kycService';
+import { photoStorageService } from '../../services/storage/photoStorageService';
+import { workerService } from '../../services/workerService';
+import { userService } from '../../services/userService';
 import { Logo } from '../common/Logo';
+import { Avatar } from '../common/Avatar';
 import {
   X,
-  CheckCircle,
   ShieldCheck,
   ArrowRight,
   ArrowLeft,
   Upload,
   Check,
-  User,
-  Phone,
-  Globe,
-  Briefcase,
-  Sparkles
+  Camera,
+  AlertCircle,
 } from 'lucide-react';
 
 const PROFESSIONS_LIST = [
@@ -31,54 +31,79 @@ const PROFESSIONS_LIST = [
   { id: 'mason', name: 'Mason', nameHi: 'राजमिस्त्री / मेसन', icon: '🧱', desc: 'Tile Fitting, Grouting & Plaster' },
 ];
 
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?auto=format&fit=crop&q=80&w=256',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=256',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=256',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
-];
-
 export const WorkerOnboardingModal: React.FC = () => {
   const { showOnboardingModal, setShowOnboardingModal, worker, updateOnboardingProfile } = useWorker();
-  const { language, setLanguage } = useLanguage();
+  const { language } = useLanguage();
+  const preferredLang = language;
 
   const [step, setStep] = useState<number>(1);
-  const [preferredLang, setPreferredLang] = useState<'en' | 'hi'>(language);
   const [isUploadingDoc, setIsUploadingDoc] = useState<boolean>(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [formData, setFormData] = useState({
-    name: worker.name || 'Rahul Kumar',
-    avatar: worker.avatar || AVATAR_OPTIONS[0],
-    phone: worker.phone || '+91 98450 12345',
-    city: 'Bangalore',
-    zone: worker.zone || 'East Bangalore (Indiranagar / Domlur)',
-    professions: worker.professions || ['Electrician', 'AC Repair'],
+    name: worker.name && worker.name !== 'Artisan Partner' && worker.name !== 'Rahul Kumar' ? worker.name : '',
+    avatar: worker.avatar || '',
+    phone: worker.phone || '',
+    email: worker.email || '',
+    dob: worker.dob || '',
+    gender: worker.gender || 'Male',
+    address: worker.address || '',
+    locality: worker.locality || '',
+    city: worker.city || 'Bangalore',
+    state: worker.state || 'Karnataka',
+    pincode: worker.pincode || '',
+    zone: worker.zone || 'Indiranagar & East Zone',
+    professions: worker.professions && worker.professions.length > 0 ? worker.professions : ['Electrician'],
     skillsMap: {} as Record<string, 'Beginner' | 'Intermediate' | 'Advanced'>,
-    experienceYears: worker.experienceYears || 6,
-    previousExperience: '6 years with City Electrical & HVAC Contractors; serviced 800+ residential units.',
-    certificationType: 'ITI Vocational Certificate (National Trade Certificate)',
-    certIdNumber: 'ITI-KAR-2020-EL4910',
-    kycStatus: 'Verified with UIDAI (Aadhaar)',
-    aadhaarNumber: worker.aadhaarNumber || '5892-4910-8921',
+    experienceYears: worker.experienceYears || 3,
+    serviceRadiusKm: worker.serviceRadiusKm || 10,
+    languages: worker.languages || ['English', 'Hindi'],
+    bio: worker.bio || '',
+    previousExperience: worker.workExperience || '',
+    certificationType: 'ITI Vocational Trade Certificate',
+    certIdNumber: '',
+    aadhaarNumber: worker.aadhaarNumber || '',
     emergencyAvailable: worker.emergencyAvailable ?? true,
-    cooperativeName: worker.cooperativeName || 'Bangalore Shramik Sahakari Sangha (Reg #KA-5412)',
-    uploadedDocs: [
-      { name: 'Aadhaar_Card_Front_Back.pdf', size: '1.4 MB', verified: true },
-      { name: 'ITI_Trade_Certificate.pdf', size: '2.1 MB', verified: true },
-    ],
+    cooperativeName: worker.cooperativeName || 'AIDORA Central Federation',
+    uploadedDocs: [] as { name: string; size: string; verified: boolean }[],
   });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    setErrorMessage('');
+    try {
+      const res = await photoStorageService.uploadProfilePhoto(worker.id, file);
+      if (res.success && res.url) {
+        setFormData((prev) => ({ ...prev, avatar: res.url! }));
+      } else {
+        setErrorMessage(res.error || 'Failed to upload photo.');
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error uploading photo.');
+    } finally {
+      setIsUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
 
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploadingDoc(true);
+    setErrorMessage('');
     try {
       const res = await kycService.uploadDocument(worker.id, file, 'aadhaar');
       if (res.success && res.doc) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           uploadedDocs: [...prev.uploadedDocs, { name: res.doc!.name, size: res.doc!.size, verified: true }],
         }));
@@ -87,6 +112,7 @@ export const WorkerOnboardingModal: React.FC = () => {
       console.warn('Error uploading KYC document:', err);
     } finally {
       setIsUploadingDoc(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -110,7 +136,7 @@ export const WorkerOnboardingModal: React.FC = () => {
     setFormData((prev) => {
       const exists = prev.professions.includes(profName);
       if (exists && prev.professions.length === 1) {
-        return prev; // keep at least 1
+        return prev;
       }
       const updated = exists ? prev.professions.filter((p) => p !== profName) : [...prev.professions, profName];
       return { ...prev, professions: updated };
@@ -127,51 +153,60 @@ export const WorkerOnboardingModal: React.FC = () => {
     }));
   };
 
-  const handleLanguageToggle = (lang: 'en' | 'hi') => {
-    setPreferredLang(lang);
-    setLanguage(lang);
-  };
-
-  const handleFinishOnboarding = () => {
+  const handleFinishOnboarding = async () => {
     const selectedSkillNames = Object.keys(formData.skillsMap);
-    updateOnboardingProfile({
-      name: formData.name,
-      avatar: formData.avatar,
-      phone: formData.phone,
-      zone: `${formData.city} • ${formData.zone}`,
-      experienceYears: Number(formData.experienceYears),
+    const workerUpdates = {
+      name: formData.name.trim() || worker.name,
+      avatar: formData.avatar || worker.avatar,
+      phone: formData.phone || worker.phone,
+      email: formData.email.trim() || undefined,
+      dob: formData.dob.trim() || undefined,
+      gender: formData.gender,
+      address: formData.address.trim(),
+      locality: formData.locality.trim() || undefined,
+      city: formData.city.trim() || 'Bangalore',
+      state: formData.state.trim() || 'Karnataka',
+      pincode: formData.pincode.trim() || undefined,
+      zone: `${formData.city} • ${formData.locality || formData.zone}`,
+      experienceYears: Number(formData.experienceYears) || 1,
+      serviceRadiusKm: Number(formData.serviceRadiusKm) || 10,
       professions: formData.professions,
       skills: selectedSkillNames.length > 0 ? selectedSkillNames : worker.skills,
       emergencyAvailable: formData.emergencyAvailable,
-      aadhaarNumber: formData.aadhaarNumber,
+      languages: formData.languages,
+      bio: formData.bio.trim(),
+      workExperience: formData.previousExperience.trim(),
+      aadhaarNumber: formData.aadhaarNumber.trim() || undefined,
       cooperativeName: formData.cooperativeName,
-      verificationStatus: 'VERIFIED',
+      verificationStatus: (worker.verificationStatus === 'VERIFIED' ? 'VERIFIED' : 'PENDING') as any,
+      isProfileCompleted: true,
+    };
+
+    updateOnboardingProfile(workerUpdates);
+    await workerService.updateWorker(worker.id, workerUpdates);
+    await userService.updateUserProfile({
+      name: workerUpdates.name,
+      email: workerUpdates.email,
+      address: workerUpdates.address,
+      city: workerUpdates.city,
+      isProfileCompleted: true,
     });
 
-    adminService.submitKycRecord({
-      workerId: worker.id,
-      workerName: formData.name,
-      phone: formData.phone,
-      profession: formData.professions.join(', '),
-      cooperativeBranch: formData.cooperativeName,
-      aadhaarNumber: formData.aadhaarNumber,
-      certificateNumber: formData.certIdNumber,
-      documents: formData.uploadedDocs,
-    });
+    if (formData.uploadedDocs.length > 0 || formData.aadhaarNumber) {
+      adminService.submitKycRecord({
+        workerId: worker.id,
+        workerName: workerUpdates.name,
+        phone: workerUpdates.phone,
+        profession: formData.professions.join(', '),
+        cooperativeBranch: formData.cooperativeName,
+        aadhaarNumber: formData.aadhaarNumber,
+        certificateNumber: formData.certIdNumber,
+        documents: formData.uploadedDocs,
+      });
+    }
 
     setShowOnboardingModal(false);
   };
-
-  // Calculate total configured skills count
-  const allAvailableSkillsForSelectedProfs = formData.professions.flatMap(
-    (prof) => TRADE_SKILLS_BY_PROFESSION[prof] || []
-  );
-  const totalConfiguredSkills = Object.keys(formData.skillsMap).filter((k) =>
-    allAvailableSkillsForSelectedProfs.some((s) => s.name === k)
-  ).length;
-  const skillsProgressPercent = allAvailableSkillsForSelectedProfs.length > 0
-    ? Math.min(100, Math.round((totalConfiguredSkills / allAvailableSkillsForSelectedProfs.length) * 100))
-    : 100;
 
   return (
     <div
@@ -193,15 +228,15 @@ export const WorkerOnboardingModal: React.FC = () => {
         className="animate-modal-enter"
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: '20px',
           maxWidth: '560px',
           width: '100%',
           maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: 'var(--shadow-xl)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.25)',
           overflow: 'hidden',
-          border: '1px solid var(--border-default)',
+          border: '1px solid #E2E8F0',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -209,28 +244,28 @@ export const WorkerOnboardingModal: React.FC = () => {
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid var(--border-default)',
+            borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'var(--bg-app)',
+            backgroundColor: '#F8FAFC',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Logo size="xs" />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: '#1DAA5C', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {preferredLang === 'hi' ? 'कारीगर साथी ऑनबोर्डिंग' : 'Worker Partner Onboarding'}
                 </span>
               </div>
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0 0' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: '#0F172A', margin: '2px 0 0' }}>
                 Step {step} of 5:{' '}
-                {step === 1 && (preferredLang === 'hi' ? 'मूल विवरण (Basic Profile)' : 'Basic Profile')}
-                {step === 2 && (preferredLang === 'hi' ? 'व्यवसाय चयन (Profession Selection)' : 'Profession Selection')}
-                {step === 3 && (preferredLang === 'hi' ? 'कौशल मैट्रिक्स (Skills Matrix)' : 'Skills Matrix')}
-                {step === 4 && (preferredLang === 'hi' ? 'अनुभव एवं दस्तावेज़ (Experience & Documents)' : 'Experience & Documents')}
-                {step === 5 && (preferredLang === 'hi' ? 'समीक्षा एवं सबमिट (Review & Submit)' : 'Review & Submit')}
+                {step === 1 && (preferredLang === 'hi' ? 'मूल विवरण (Basic Profile)' : 'Personal Details')}
+                {step === 2 && (preferredLang === 'hi' ? 'व्यवसाय एवं अनुभव' : 'Trade & Experience')}
+                {step === 3 && (preferredLang === 'hi' ? 'कौशल मैट्रिक्स' : 'Skills & Services')}
+                {step === 4 && (preferredLang === 'hi' ? 'केवाईसी एवं पहचान दस्तावेज़' : 'KYC & Verification')}
+                {step === 5 && (preferredLang === 'hi' ? 'समीक्षा एवं सबमिट' : 'Review & Submit')}
               </h3>
             </div>
           </div>
@@ -242,290 +277,201 @@ export const WorkerOnboardingModal: React.FC = () => {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--text-muted)',
+              color: '#64748B',
               padding: '4px',
-              borderRadius: 'var(--radius-xs)',
             }}
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* 5-Step Visual Progress Bar */}
-        <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-muted)', position: 'relative' }}>
-          <div
-            style={{
-              width: `${(step / 5) * 100}%`,
-              height: '100%',
-              backgroundColor: 'var(--primary)',
-              transition: 'width var(--transition-fast)',
-            }}
-          />
-        </div>
-
-        {/* Step Indicator Badges */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 20px',
-            backgroundColor: '#F8FAFC',
-            borderBottom: '1px solid var(--border-subtle)',
-            fontSize: '0.6875rem',
-            color: 'var(--text-secondary)',
-          }}
-        >
-          {[1, 2, 3, 4, 5].map((s) => (
-            <div
-              key={s}
-              onClick={() => setStep(s)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                cursor: 'pointer',
-                fontWeight: step === s ? 800 : 500,
-                color: step === s ? 'var(--primary)' : s < step ? 'var(--success-dark)' : 'var(--text-muted)',
-              }}
-            >
-              <div
-                style={{
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.625rem',
-                  backgroundColor: step === s ? 'var(--primary)' : s < step ? 'var(--success-light)' : 'var(--bg-muted)',
-                  color: step === s ? '#FFFFFF' : s < step ? 'var(--success-dark)' : 'var(--text-muted)',
-                  border: s < step ? '1px solid var(--success-border)' : 'none',
-                }}
-              >
-                {s < step ? '✓' : s}
-              </div>
-              <span style={{ fontSize: '0.6875rem' }}>
-                {s === 1 ? 'Profile' : s === 2 ? 'Trades' : s === 3 ? 'Skills' : s === 4 ? 'Docs' : 'Review'}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Form Body */}
+        {/* Modal Body */}
         <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-          {/* STEP 1: Basic Profile */}
+          {errorMessage && (
+            <div style={{ padding: '10px 14px', backgroundColor: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '10px', color: '#B91C1C', fontSize: '0.8125rem', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertCircle size={15} />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {/* STEP 1: PERSONAL DETAILS & PHOTO */}
           {step === 1 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Profile Photo Selector */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
-                  {preferredLang === 'hi' ? 'प्रोफ़ाइल फ़ोटो चुनें' : 'Worker Profile Photo'}
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Profile Photo Upload */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <div style={{ position: 'relative' }}>
+                  <Avatar
                     src={formData.avatar}
-                    alt="Selected Avatar"
-                    style={{
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: 'var(--radius-md)',
-                      objectFit: 'cover',
-                      border: '2px solid var(--primary)',
-                    }}
+                    name={formData.name || 'Worker'}
+                    size={64}
+                    shape="rounded"
                   />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                      {preferredLang === 'hi' ? 'मानक पेशेवर अवतार चुनें:' : 'Select professional avatar / photo:'}
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {AVATAR_OPTIONS.map((imgUrl, i) => (
-                        <img
-                          key={i}
-                          src={imgUrl}
-                          alt={`Avatar option ${i + 1}`}
-                          onClick={() => setFormData({ ...formData, avatar: imgUrl })}
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: 'var(--radius-xs)',
-                            objectFit: 'cover',
-                            cursor: 'pointer',
-                            border: formData.avatar === imgUrl ? '2px solid var(--primary)' : '1px solid var(--border-default)',
-                          }}
-                        />
-                      ))}
-                    </div>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    disabled={isUploadingPhoto}
+                    style={{
+                      position: 'absolute',
+                      bottom: '-4px',
+                      right: '-4px',
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      backgroundColor: '#1DAA5C',
+                      color: '#FFFFFF',
+                      border: '2px solid #FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                    title="Upload Photo"
+                  >
+                    <Camera size={13} />
+                  </button>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={handlePhotoUpload}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A' }}>
+                    Profile Photo
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                    {isUploadingPhoto ? 'Uploading image...' : 'Clear photo helps customers identify you during home visits'}
                   </div>
                 </div>
               </div>
 
-              {/* Worker Name */}
+              {/* Full Name */}
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'पूरा नाम (आधार कार्ड अनुसार)' : 'Worker Full Name (as per Govt ID)'}
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  FULL NAME *
                 </label>
-                <div style={{ position: 'relative' }}>
-                  <User size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '12px' }} />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Rahul Kumar"
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px 9px 34px',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)',
-                      fontSize: '0.875rem',
-                    }}
-                  />
-                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter your full legal name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                />
               </div>
 
-              {/* Phone Number */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'मोबाइल नंबर (ओटीपी एवं जॉब डिस्पैच हेतु)' : 'Phone Number (for OTP and Job Dispatch)'}
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Phone size={15} color="var(--text-muted)" style={{ position: 'absolute', left: '10px', top: '12px' }} />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+91 98450 12345"
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px 9px 34px',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)',
-                      fontSize: '0.875rem',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* City & Service Zone */}
+              {/* Phone (Read Only) & Email */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                    {preferredLang === 'hi' ? 'शहर (City)' : 'City'}
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    PHONE (REGISTERED)
                   </label>
-                  <select
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '9px 10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)',
-                      fontSize: '0.8125rem',
-                      backgroundColor: '#FFFFFF',
-                    }}
-                  >
-                    <option value="Bangalore">Bangalore (Bengaluru)</option>
-                    <option value="Delhi NCR">Delhi NCR (Noida / Gurgaon)</option>
-                    <option value="Mumbai">Mumbai (MMR)</option>
-                    <option value="Hyderabad">Hyderabad</option>
-                    <option value="Pune">Pune</option>
-                  </select>
+                  <input
+                    type="text"
+                    disabled
+                    value={formData.phone}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #E2E8F0', backgroundColor: '#F1F5F9', color: '#64748B', fontSize: '0.875rem' }}
+                  />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                    {preferredLang === 'hi' ? 'सेवा क्षेत्र / ज़ोन' : 'Primary Service Zone'}
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    EMAIL (OPTIONAL)
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="worker@example.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* DOB & Gender */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    DATE OF BIRTH
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.dob}
+                    onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    GENDER
                   </label>
                   <select
-                    value={formData.zone}
-                    onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '9px 10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-default)',
-                      fontSize: '0.8125rem',
-                      backgroundColor: '#FFFFFF',
-                    }}
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem', backgroundColor: '#FFFFFF' }}
                   >
-                    <option value="East Bangalore (Indiranagar / Domlur)">East (Indiranagar / Domlur)</option>
-                    <option value="South Bangalore (Koramangala / HSR)">South (Koramangala / HSR)</option>
-                    <option value="North Bangalore (Hebbal / Yelahanka)">North (Hebbal / Yelahanka)</option>
-                    <option value="Central Zone (MG Road / Richmond)">Central Zone</option>
-                    <option value="Sector 62 Noida & Indirapuram">Sector 62 Noida / Indirapuram</option>
-                    <option value="DLF Phase 1-5 & Cyber City Gurgaon">DLF Phase 1-5 Gurgaon</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
 
-              {/* Preferred Language */}
+              {/* Address & Locality */}
               <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
-                  {preferredLang === 'hi' ? 'पसंदीदा भाषा (Preferred Language)' : 'Preferred Language'}
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  RESIDENTIAL / BASE ADDRESS
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleLanguageToggle('en')}
-                    style={{
-                      padding: '10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: `1.5px solid ${preferredLang === 'en' ? 'var(--primary)' : 'var(--border-default)'}`,
-                      backgroundColor: preferredLang === 'en' ? 'var(--primary-light)' : '#FFFFFF',
-                      color: preferredLang === 'en' ? 'var(--primary-dark)' : 'var(--text-primary)',
-                      fontWeight: preferredLang === 'en' ? 800 : 600,
-                      fontSize: '0.8125rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Globe size={15} />
-                    <span>English (Primary)</span>
-                  </button>
+                <input
+                  type="text"
+                  placeholder="Street address / workshop location"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                />
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleLanguageToggle('hi')}
-                    style={{
-                      padding: '10px',
-                      borderRadius: 'var(--radius-md)',
-                      border: `1.5px solid ${preferredLang === 'hi' ? 'var(--primary)' : 'var(--border-default)'}`,
-                      backgroundColor: preferredLang === 'hi' ? 'var(--primary-light)' : '#FFFFFF',
-                      color: preferredLang === 'hi' ? 'var(--primary-dark)' : 'var(--text-primary)',
-                      fontWeight: preferredLang === 'hi' ? 800 : 600,
-                      fontSize: '0.8125rem',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Globe size={15} />
-                    <span>हिन्दी (Hindi)</span>
-                  </button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    LOCALITY / ZONE
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Indiranagar"
+                    value={formData.locality}
+                    onChange={(e) => setFormData({ ...formData, locality: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    CITY
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 2: Profession Selection */}
+          {/* STEP 2: TRADE & EXPERIENCE */}
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '2px' }}>
-                  {preferredLang === 'hi' ? 'अपने ट्रेड व्यवसाय चुनें (बहु-चयन संभव)' : 'Select Your Trade Professions'}
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                  {preferredLang === 'hi'
-                    ? 'AIDORA बहु-कुशल कारीगरों का समर्थन करता है। आप एक से अधिक ट्रेड चुन सकते हैं।'
-                    : 'AIDORA supports multi-skilled artisans. Select all professions you are qualified to perform.'}
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '8px' }}>
+                  SELECT TRADES / PROFESSIONS (SELECT ALL THAT APPLY)
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                   {PROFESSIONS_LIST.map((prof) => {
                     const isSelected = formData.professions.includes(prof.name);
                     return (
@@ -533,446 +479,285 @@ export const WorkerOnboardingModal: React.FC = () => {
                         key={prof.id}
                         onClick={() => toggleProfession(prof.name)}
                         style={{
-                          padding: '12px',
-                          borderRadius: 'var(--radius-md)',
-                          border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-default)'}`,
-                          backgroundColor: isSelected ? 'var(--primary-light)' : '#FFFFFF',
+                          padding: '10px 12px',
+                          borderRadius: '12px',
+                          border: `1.5px solid ${isSelected ? '#1DAA5C' : '#E2E8F0'}`,
+                          backgroundColor: isSelected ? '#F0FDF4' : '#FFFFFF',
                           cursor: 'pointer',
                           display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px',
-                          transition: 'all var(--transition-fast)',
+                          alignItems: 'center',
+                          gap: '8px',
                         }}
-                        className="hover-card"
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: '1.25rem' }}>{prof.icon}</span>
-                          <div
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              borderRadius: '4px',
-                              border: `1.5px solid ${isSelected ? 'var(--primary)' : 'var(--border-strong)'}`,
-                              backgroundColor: isSelected ? 'var(--primary)' : 'transparent',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#FFFFFF',
-                            }}
-                          >
-                            {isSelected && <Check size={12} strokeWidth={3} />}
+                        <span style={{ fontSize: '1.25rem' }}>{prof.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A' }}>
+                            {prof.name}
                           </div>
-                        </div>
-
-                        <div>
-                          <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                            {preferredLang === 'hi' ? prof.nameHi : prof.name}
-                          </div>
-                          <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)', lineHeight: 1.25, marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.6875rem', color: '#64748B' }}>
                             {prof.desc}
                           </div>
                         </div>
+                        {isSelected && <Check size={16} color="#1DAA5C" strokeWidth={3} />}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Selected summary badge */}
-              <div
-                style={{
-                  padding: '10px 12px',
-                  backgroundColor: 'var(--bg-app)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-default)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '0.75rem',
-                }}
-              >
-                <span style={{ color: 'var(--text-secondary)' }}>
-                  {preferredLang === 'hi' ? 'चयनित व्यवसाय:' : 'Selected Professions:'}{' '}
-                  <strong>{formData.professions.join(', ')}</strong>
-                </span>
-                <span style={{ fontWeight: 800, color: 'var(--primary)' }}>
-                  {formData.professions.length} Selected
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 3: Skills Matrix */}
-          {step === 3 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                    {preferredLang === 'hi' ? 'कौशल दक्षता स्तर कॉन्फ़िगर करें' : 'Configure Skill Proficiency Levels'}
-                  </div>
-                  <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--primary)' }}>
-                    {totalConfiguredSkills} / {allAvailableSkillsForSelectedProfs.length} Skills ({skillsProgressPercent}%)
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                  {preferredLang === 'hi'
-                    ? 'प्रत्येक ट्रेड के लिए अपना स्तर (शुरुआती, मध्यम, उन्नत) चुनें।'
-                    : 'Specify your self-assessed competency level for each trade skill.'}
-                </div>
-
-                {/* Progress Bar for Skills */}
-                <div style={{ width: '100%', height: '5px', backgroundColor: 'var(--bg-muted)', borderRadius: 'var(--radius-full)', marginBottom: '14px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${skillsProgressPercent}%`,
-                      height: '100%',
-                      backgroundColor: 'var(--primary)',
-                      transition: 'width var(--transition-fast)',
-                    }}
+              {/* Experience Years & Service Radius */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    EXPERIENCE (YEARS)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={40}
+                    value={formData.experienceYears}
+                    onChange={(e) => setFormData({ ...formData, experienceYears: parseInt(e.target.value, 10) || 1 })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
                   />
-                </div>
-
-                {/* Grouped by selected professions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {formData.professions.map((prof) => {
-                    const skills = TRADE_SKILLS_BY_PROFESSION[prof] || [];
-                    return (
-                      <div
-                        key={prof}
-                        style={{
-                          backgroundColor: '#FFFFFF',
-                          border: '1px solid var(--border-default)',
-                          borderRadius: 'var(--radius-md)',
-                          padding: '12px',
-                        }}
-                      >
-                        <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-dark)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <Briefcase size={13} />
-                          <span>{prof} Trade Skills</span>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {skills.map((skill) => {
-                            const currentLevel = formData.skillsMap[skill.name] || skill.defaultLevel;
-                            return (
-                              <div
-                                key={skill.name}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '8px 10px',
-                                  backgroundColor: 'var(--bg-app)',
-                                  borderRadius: 'var(--radius-xs)',
-                                  border: '1px solid var(--border-subtle)',
-                                  gap: '8px',
-                                }}
-                              >
-                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>
-                                  {preferredLang === 'hi' ? skill.nameHi : skill.name}
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                  {(['Beginner', 'Intermediate', 'Advanced'] as const).map((lvl) => {
-                                    const isLvlActive = currentLevel === lvl;
-                                    return (
-                                      <button
-                                        key={lvl}
-                                        type="button"
-                                        onClick={() => handleSkillLevelChange(skill.name, lvl)}
-                                        style={{
-                                          padding: '3px 8px',
-                                          borderRadius: 'var(--radius-xs)',
-                                          fontSize: '0.625rem',
-                                          fontWeight: isLvlActive ? 800 : 500,
-                                          border: isLvlActive ? '1px solid var(--primary)' : '1px solid var(--border-default)',
-                                          backgroundColor: isLvlActive ? 'var(--primary)' : '#FFFFFF',
-                                          color: isLvlActive ? '#FFFFFF' : 'var(--text-secondary)',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        {lvl === 'Beginner' ? (preferredLang === 'hi' ? 'बुनियादी' : 'Beg') : lvl === 'Intermediate' ? (preferredLang === 'hi' ? 'मध्यम' : 'Inter') : (preferredLang === 'hi' ? 'उन्नत' : 'Adv')}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: Experience & Documents */}
-          {step === 4 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {/* Experience Years */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'कुल कार्य अनुभव (वर्षों में)' : 'Total Work Experience (Years)'}
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={40}
-                  value={formData.experienceYears}
-                  onChange={(e) => setFormData({ ...formData, experienceYears: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-default)',
-                    fontSize: '0.875rem',
-                  }}
-                />
-              </div>
-
-              {/* Previous Experience Description */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'पिछला कार्य अनुभव एवं प्रमुख प्रोजेक्ट्स' : 'Previous Work History & Projects'}
-                </label>
-                <textarea
-                  rows={2}
-                  value={formData.previousExperience}
-                  onChange={(e) => setFormData({ ...formData, previousExperience: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-default)',
-                    fontSize: '0.8125rem',
-                    resize: 'none',
-                  }}
-                />
-              </div>
-
-              {/* ITI / NSDC / Trade Certification Selection */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'व्यावसायिक प्रमाण पत्र चयन (ITI / NSDC / राज्य बोर्ड)' : 'Vocational Certification Selection'}
-                </label>
-                <select
-                  value={formData.certificationType}
-                  onChange={(e) => setFormData({ ...formData, certificationType: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '9px 10px',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-default)',
-                    fontSize: '0.8125rem',
-                    backgroundColor: '#FFFFFF',
-                  }}
-                >
-                  <option value="ITI Vocational Certificate (National Trade Certificate)">ITI National Trade Certificate (NTC)</option>
-                  <option value="NSDC Skill India Level 4 Certified">NSDC Skill India Level 4 Certified</option>
-                  <option value="State Apprenticeship Board Certificate">State Apprenticeship Board Certificate</option>
-                  <option value="Cooperative Trade Recognition Guild">Cooperative Trade Recognition Guild</option>
-                  <option value="Direct Practical Trade Experience (Uncertified)">Direct Practical Experience (Will Take Assessment)</option>
-                </select>
-              </div>
-
-              {/* Real Document Upload UI */}
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'दस्तावेज़ अपलोड (Aadhaar, Trade Cert, KYC)' : 'Upload Government ID & Trade Certificates'}
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleDocumentUpload}
-                  accept="image/*,.pdf"
-                  style={{ display: 'none' }}
-                />
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    border: '1.5px dashed var(--primary)',
-                    backgroundColor: 'var(--primary-light)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '14px',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s ease',
-                  }}
-                >
-                  <Upload size={22} color="var(--primary)" style={{ margin: '0 auto 4px' }} />
-                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
-                    {isUploadingDoc
-                      ? (preferredLang === 'hi' ? 'अपलोड हो रहा है...' : 'Uploading Document to Storage...')
-                      : (preferredLang === 'hi' ? 'दस्तावेज़ अपलोड करने के लिए क्लिक करें' : 'Click to Upload Document / Certificate')}
-                  </div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    {formData.uploadedDocs.map((d, idx) => (
-                      <span key={idx} style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>
-                        ✓ {d.name} ({d.size})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* KYC Verification Status Card */}
-              <div
-                style={{
-                  backgroundColor: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShieldCheck size={20} color="#059669" />
-                  <div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#065F46' }}>
-                      UIDAI KYC Verification Active
-                    </div>
-                    <div style={{ fontSize: '0.625rem', color: '#047857' }}>
-                      Aadhaar: {formData.aadhaarNumber} • Instant Digital Trust
-                    </div>
-                  </div>
-                </div>
-                <span style={{ fontSize: '0.625rem', fontWeight: 800, color: '#059669', backgroundColor: '#D1FAE5', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>
-                  VERIFIED
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Review & Submit */}
-          {step === 5 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ backgroundColor: 'var(--primary-light, #F0FDF4)', border: '1.5px solid var(--primary-border, #D9E9C8)', borderRadius: 'var(--radius-md)', padding: '12px', textAlign: 'center' }}>
-                <Sparkles size={22} color="var(--primary)" style={{ margin: '0 auto 4px' }} />
-                <div style={{ fontSize: '0.875rem', fontWeight: 900, color: 'var(--primary-dark, #0F7A3E)' }}>
-                  {preferredLang === 'hi' ? 'ऑनबोर्डिंग समीक्षा एवं पुष्टि' : 'Worker Onboarding Summary'}
-                </div>
-                <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {preferredLang === 'hi'
-                    ? 'कृपया अपने सभी विवरणों की जांच करें। पुष्टि के पश्चात आपका प्रोफ़ाइल लाइव हो जाएगा।'
-                    : 'Verify your partner credentials below before activating your active dispatch profile.'}
-                </div>
-              </div>
-
-              {/* Summary Information Table */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-default)',
-                  padding: '14px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  fontSize: '0.75rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <img
-                    src={formData.avatar}
-                    alt={formData.name}
-                    style={{ width: '44px', height: '44px', borderRadius: 'var(--radius-sm)', objectFit: 'cover' }}
-                  />
-                  <div>
-                    <div style={{ fontWeight: 900, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
-                      {formData.name}
-                    </div>
-                    <div style={{ color: 'var(--text-secondary)' }}>
-                      {formData.phone} • {formData.city} ({formData.zone})
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.6875rem' }}>Professions:</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{formData.professions.join(', ')}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.6875rem' }}>Experience:</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{formData.experienceYears} Years Total</strong>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.6875rem' }}>Certification:</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{formData.certificationType}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.6875rem' }}>KYC Status:</span>
-                    <strong style={{ color: 'var(--success-dark)' }}>✓ UIDAI Aadhaar Verified</strong>
-                  </div>
                 </div>
 
                 <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.6875rem', marginBottom: '4px' }}>Configured Skills Matrix:</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {Object.entries(formData.skillsMap).map(([sName, sLevel]) => (
-                      <span
-                        key={sName}
-                        style={{
-                          fontSize: '0.625rem',
-                          backgroundColor: 'var(--bg-app)',
-                          border: '1px solid var(--border-default)',
-                          padding: '2px 6px',
-                          borderRadius: 'var(--radius-xs)',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        {sName} ({sLevel})
-                      </span>
-                    ))}
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                    SERVICE RADIUS (KM)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={formData.serviceRadiusKm}
+                    onChange={(e) => setFormData({ ...formData, serviceRadiusKm: parseInt(e.target.value, 10) || 10 })}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Short Bio */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  SHORT PROFESSIONAL BIO
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Certified technician specializing in residential AC and electrical servicing for 6+ years."
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              {/* Work Experience */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  PAST WORK EXPERIENCE / COMPANIES
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 4 years with City Electrical & HVAC Contractors"
+                  value={formData.previousExperience}
+                  onChange={(e) => setFormData({ ...formData, previousExperience: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: SKILLS MATRIX */}
+          {step === 3 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '0.8125rem', color: '#64748B', margin: 0 }}>
+                Specify your proficiency level for each specific service task in your selected trade:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {formData.professions.map((prof) => {
+                  const skills = TRADE_SKILLS_BY_PROFESSION[prof] || [];
+                  return (
+                    <div key={prof} style={{ border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', backgroundColor: '#F8FAFC' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+                        {prof} Skills
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {skills.map((skill) => (
+                          <div key={skill.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#334155' }}>
+                              {skill.name}
+                            </span>
+                            <select
+                              value={formData.skillsMap[skill.name] || 'Intermediate'}
+                              onChange={(e) => handleSkillLevelChange(skill.name, e.target.value as any)}
+                              style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.75rem', fontWeight: 700 }}
+                            >
+                              <option value="Beginner">Beginner</option>
+                              <option value="Intermediate">Intermediate</option>
+                              <option value="Advanced">Advanced / Master</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: KYC & DOCUMENTS */}
+          {step === 4 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ padding: '12px', backgroundColor: '#F0FDF4', borderRadius: '12px', border: '1px solid #D9E9C8', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={24} color="#1DAA5C" />
+                <div style={{ fontSize: '0.8125rem', color: '#166534', lineHeight: 1.4 }}>
+                  <strong>Admin Verification Guarantee:</strong> Upload your Aadhaar or trade certificate for government/cooperative compliance.
+                </div>
+              </div>
+
+              {/* Aadhaar Number */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  AADHAAR NUMBER (UIDAI)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 5892-4910-8921"
+                  value={formData.aadhaarNumber}
+                  onChange={(e) => setFormData({ ...formData, aadhaarNumber: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '0.875rem' }}
+                />
+              </div>
+
+              {/* Document Upload Button */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>
+                  UPLOAD KYC DOCUMENTS (AADHAAR / ITI CERTIFICATE / LICENSE)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingDoc}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '1.5px dashed #CBD5E1',
+                    borderRadius: '12px',
+                    backgroundColor: '#F8FAFC',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Upload size={20} color="#64748B" />
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155' }}>
+                    {isUploadingDoc ? 'Uploading document to secure storage...' : 'Click to upload PDF or Image (Max 50MB)'}
+                  </span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  style={{ display: 'none' }}
+                  onChange={handleDocumentUpload}
+                />
+              </div>
+
+              {/* Uploaded Docs List */}
+              {formData.uploadedDocs.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569' }}>
+                    UPLOADED DOCUMENTS ({formData.uploadedDocs.length})
+                  </div>
+                  {formData.uploadedDocs.map((d, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: '#F0FDF4', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+                      <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#166534' }}>{d.name}</span>
+                      <span style={{ fontSize: '0.6875rem', color: '#15803D' }}>{d.size} ✓</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Emergency Availability Duty Checkbox */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={formData.emergencyAvailable}
+                  onChange={(e) => setFormData({ ...formData, emergencyAvailable: e.target.checked })}
+                  style={{ width: '16px', height: '16px', accentColor: '#1DAA5C' }}
+                />
+                <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#334155' }}>
+                  Available for Rapid Emergency Dispatch (15-20 min urgent repairs)
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* STEP 5: REVIEW & SUBMIT */}
+          {step === 5 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                  <Avatar src={formData.avatar} name={formData.name || 'Worker'} size={50} shape="rounded" />
+                  <div>
+                    <div style={{ fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>
+                      {formData.name || 'Artisan Partner'}
+                    </div>
+                    <div style={{ fontSize: '0.8125rem', color: '#1DAA5C', fontWeight: 700 }}>
+                      {formData.professions.join(', ')} • {formData.experienceYears} Yrs Exp
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ paddingTop: '8px', borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '0.6875rem' }}>
-                  Cooperative Union: <strong>{formData.cooperativeName}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div>📍 Base Zone: {formData.city}, {formData.locality || formData.zone} (Radius: {formData.serviceRadiusKm} km)</div>
+                  <div>📱 Phone: {formData.phone}</div>
+                  <div>🛡️ Aadhaar: {formData.aadhaarNumber || 'Not provided'}</div>
+                  <div>⚡ Emergency Ready: {formData.emergencyAvailable ? 'Yes' : 'No'}</div>
+                  <div>📄 KYC Docs: {formData.uploadedDocs.length} uploaded</div>
                 </div>
+              </div>
+
+              <div style={{ padding: '12px', backgroundColor: '#FEF3C7', borderRadius: '12px', border: '1px solid #FDE68A', fontSize: '0.75rem', color: '#92400E' }}>
+                <strong>Note on Governance:</strong> Upon submission, your profile will be queued for Admin verification. You can receive marketplace bookings once approved.
               </div>
             </div>
           )}
         </div>
 
-        {/* Modal Footer Navigation */}
+        {/* Modal Footer Controls */}
         <div
           style={{
-            padding: '12px 20px',
-            borderTop: '1px solid var(--border-default)',
+            padding: '14px 20px',
+            borderTop: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: 'var(--bg-app)',
+            backgroundColor: '#F8FAFC',
           }}
         >
           {step > 1 ? (
             <button
               type="button"
-              onClick={() => setStep((prev) => prev - 1)}
+              onClick={() => setStep(step - 1)}
               style={{
-                padding: '8px 14px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)',
+                padding: '9px 16px',
+                borderRadius: '10px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CBD5E1',
+                fontSize: '0.8125rem',
                 fontWeight: 700,
-                fontSize: '0.75rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
               }}
             >
-              <ArrowLeft size={14} />
-              <span>{preferredLang === 'hi' ? 'पिछला' : 'Back'}</span>
+              <ArrowLeft size={15} />
+              <span>Back</span>
             </button>
           ) : (
             <div />
@@ -981,47 +766,51 @@ export const WorkerOnboardingModal: React.FC = () => {
           {step < 5 ? (
             <button
               type="button"
-              onClick={() => setStep((prev) => prev + 1)}
+              onClick={() => {
+                if (step === 1 && !formData.name.trim()) {
+                  setErrorMessage('Please enter your full legal name.');
+                  return;
+                }
+                setErrorMessage('');
+                setStep(step + 1);
+              }}
               style={{
-                padding: '8px 18px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--primary)',
+                padding: '9px 20px',
+                borderRadius: '10px',
+                backgroundColor: '#1DAA5C',
                 color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '0.75rem',
                 border: 'none',
+                fontSize: '0.8125rem',
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
               }}
-              className="sahyog-btn"
             >
-              <span>{preferredLang === 'hi' ? 'आगे बढ़ें' : 'Next Step'}</span>
-              <ArrowRight size={14} />
+              <span>Next</span>
+              <ArrowRight size={15} />
             </button>
           ) : (
             <button
               type="button"
               onClick={handleFinishOnboarding}
               style={{
-                padding: '9px 20px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'var(--success-dark)',
+                padding: '10px 24px',
+                borderRadius: '10px',
+                backgroundColor: '#1DAA5C',
                 color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '0.8125rem',
                 border: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                boxShadow: 'var(--shadow-sm)',
               }}
-              className="sahyog-btn"
             >
-              <CheckCircle size={16} />
-              <span>{preferredLang === 'hi' ? 'ऑनबोर्डिंग पूर्ण करें' : 'Complete Onboarding'}</span>
+              <Check size={16} />
+              <span>Save & Complete Profile</span>
             </button>
           )}
         </div>

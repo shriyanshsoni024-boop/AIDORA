@@ -15,6 +15,7 @@ import { PersonalDetailsScreen } from '../../pages/customer/onboarding/PersonalD
 import { LocationScreen } from '../../pages/customer/onboarding/LocationScreen';
 import { AddAddressScreen } from '../../pages/customer/onboarding/AddAddressScreen';
 import { AddressSelectorModal } from '../customer/AddressSelectorModal';
+import { userService } from '../../services/userService';
 
 export const CustomerShell: React.FC = () => {
   const { activeView, selectedLocation, setSelectedLocation } = useBooking();
@@ -70,10 +71,15 @@ export const CustomerShell: React.FC = () => {
     return (
       <div style={{ width: '100%', maxWidth: '440px', margin: '0 auto' }}>
         <PersonalDetailsScreen
-          onConfirm={(_details) => {
+          onConfirm={async (details) => {
+            const fullName = `${details.firstName} ${details.lastName}`.trim();
+            await userService.updateUserProfile({
+              name: fullName,
+              email: details.email || undefined,
+            });
             setOnboardingStep('location');
           }}
-          onBack={() => setOnboardingStep('otp')}
+          onBack={() => setOnboardingStep(null)}
         />
       </div>
     );
@@ -102,8 +108,26 @@ export const CustomerShell: React.FC = () => {
         <AddAddressScreen
           initialLocation={tempLocation}
           onChangeLocation={() => setOnboardingStep('location')}
-          onSaveAddress={(addr) => {
+          onSaveAddress={async (addr) => {
             setSelectedLocation(addr.locality);
+            await userService.addSavedAddress({
+              label: addr.type,
+              name: addr.receiverName,
+              flat: addr.flatNo,
+              building: addr.buildingName,
+              fullAddress: addr.fullAddress,
+              locality: addr.locality,
+              city: 'Bangalore',
+              state: 'Karnataka',
+              pincode: '560038',
+              phone: addr.receiverPhone,
+              isDefault: true,
+            });
+            await userService.updateUserProfile({
+              isProfileCompleted: true,
+              address: addr.fullAddress,
+              locality: addr.locality,
+            });
             setOnboardingStep(null);
           }}
           onBack={() => setOnboardingStep('location')}
@@ -124,7 +148,7 @@ export const CustomerShell: React.FC = () => {
       case 'history':
         return <CustomerHistoryPage />;
       case 'profile':
-        return <CustomerProfilePage onOpenAddresses={() => setShowAddressModal(true)} />;
+        return <CustomerProfilePage />;
       case 'money':
         return <CustomerMoneyPage />;
       case 'home':
