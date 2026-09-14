@@ -3,11 +3,12 @@ import { useWorker } from '../../context/WorkerContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { TRADE_SKILLS_BY_PROFESSION } from '../../data/workerTrainingData';
 import { adminService } from '../../services/adminService';
+import { kycService } from '../../services/kycService';
+import { Logo } from '../common/Logo';
 import {
   X,
   CheckCircle,
   ShieldCheck,
-  HardHat,
   ArrowRight,
   ArrowLeft,
   Upload,
@@ -43,6 +44,8 @@ export const WorkerOnboardingModal: React.FC = () => {
 
   const [step, setStep] = useState<number>(1);
   const [preferredLang, setPreferredLang] = useState<'en' | 'hi'>(language);
+  const [isUploadingDoc, setIsUploadingDoc] = useState<boolean>(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -66,6 +69,26 @@ export const WorkerOnboardingModal: React.FC = () => {
       { name: 'ITI_Trade_Certificate.pdf', size: '2.1 MB', verified: true },
     ],
   });
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingDoc(true);
+    try {
+      const res = await kycService.uploadDocument(worker.id, file, 'aadhaar');
+      if (res.success && res.doc) {
+        setFormData(prev => ({
+          ...prev,
+          uploadedDocs: [...prev.uploadedDocs, { name: res.doc!.name, size: res.doc!.size, verified: true }],
+        }));
+      }
+    } catch (err) {
+      console.warn('Error uploading KYC document:', err);
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
 
   // Initialize skills map for current selected professions
   React.useEffect(() => {
@@ -193,21 +216,23 @@ export const WorkerOnboardingModal: React.FC = () => {
             backgroundColor: 'var(--bg-app)',
           }}
         >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <HardHat size={16} color="var(--primary)" />
-              <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {preferredLang === 'hi' ? 'कारीगर साथी ऑनबोर्डिंग' : 'Worker Partner Onboarding'}
-              </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Logo size="xs" />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.6875rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {preferredLang === 'hi' ? 'कारीगर साथी ऑनबोर्डिंग' : 'Worker Partner Onboarding'}
+                </span>
+              </div>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0 0' }}>
+                Step {step} of 5:{' '}
+                {step === 1 && (preferredLang === 'hi' ? 'मूल विवरण (Basic Profile)' : 'Basic Profile')}
+                {step === 2 && (preferredLang === 'hi' ? 'व्यवसाय चयन (Profession Selection)' : 'Profession Selection')}
+                {step === 3 && (preferredLang === 'hi' ? 'कौशल मैट्रिक्स (Skills Matrix)' : 'Skills Matrix')}
+                {step === 4 && (preferredLang === 'hi' ? 'अनुभव एवं दस्तावेज़ (Experience & Documents)' : 'Experience & Documents')}
+                {step === 5 && (preferredLang === 'hi' ? 'समीक्षा एवं सबमिट (Review & Submit)' : 'Review & Submit')}
+              </h3>
             </div>
-            <h3 style={{ fontSize: '0.9375rem', fontWeight: 800, color: 'var(--text-primary)', margin: '2px 0 0' }}>
-              Step {step} of 5:{' '}
-              {step === 1 && (preferredLang === 'hi' ? 'मूल विवरण (Basic Profile)' : 'Basic Profile')}
-              {step === 2 && (preferredLang === 'hi' ? 'व्यवसाय चयन (Profession Selection)' : 'Profession Selection')}
-              {step === 3 && (preferredLang === 'hi' ? 'कौशल मैट्रिक्स (Skills Matrix)' : 'Skills Matrix')}
-              {step === 4 && (preferredLang === 'hi' ? 'अनुभव एवं दस्तावेज़ (Experience & Documents)' : 'Experience & Documents')}
-              {step === 5 && (preferredLang === 'hi' ? 'समीक्षा एवं सबमिट (Review & Submit)' : 'Review & Submit')}
-            </h3>
           </div>
 
           <button
@@ -496,8 +521,8 @@ export const WorkerOnboardingModal: React.FC = () => {
                 </div>
                 <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginBottom: '10px' }}>
                   {preferredLang === 'hi'
-                    ? 'सहयोग बहु-कुशल कारीगरों का समर्थन करता है। आप एक से अधिक ट्रेड चुन सकते हैं।'
-                    : 'SAHYOG supports multi-skilled artisans. Select all professions you are qualified to perform.'}
+                    ? 'AIDORA बहु-कुशल कारीगरों का समर्थन करता है। आप एक से अधिक ट्रेड चुन सकते हैं।'
+                    : 'AIDORA supports multi-skilled artisans. Select all professions you are qualified to perform.'}
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -752,26 +777,42 @@ export const WorkerOnboardingModal: React.FC = () => {
                 </select>
               </div>
 
-              {/* Document Upload UI (Placeholder Simulation) */}
+              {/* Real Document Upload UI */}
               <div>
                 <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                  {preferredLang === 'hi' ? 'दस्तावेज़ अपलोड (Aadhaar, Trade Cert, KYC)' : 'Document Upload Placeholder (Aadhaar & Trade Cert)'}
+                  {preferredLang === 'hi' ? 'दस्तावेज़ अपलोड (Aadhaar, Trade Cert, KYC)' : 'Upload Government ID & Trade Certificates'}
                 </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleDocumentUpload}
+                  accept="image/*,.pdf"
+                  style={{ display: 'none' }}
+                />
                 <div
+                  onClick={() => fileInputRef.current?.click()}
                   style={{
                     border: '1.5px dashed var(--primary)',
                     backgroundColor: 'var(--primary-light)',
                     borderRadius: 'var(--radius-md)',
                     padding: '14px',
                     textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
                   }}
                 >
                   <Upload size={22} color="var(--primary)" style={{ margin: '0 auto 4px' }} />
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary-dark)' }}>
-                    {preferredLang === 'hi' ? 'आधार कार्ड एवं ट्रेड सर्टिफिकेट संलग्न हैं' : 'Government ID & Trade Certificate Attached'}
+                    {isUploadingDoc
+                      ? (preferredLang === 'hi' ? 'अपलोड हो रहा है...' : 'Uploading Document to Storage...')
+                      : (preferredLang === 'hi' ? 'दस्तावेज़ अपलोड करने के लिए क्लिक करें' : 'Click to Upload Document / Certificate')}
                   </div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                    ✓ Simulated upload: {formData.uploadedDocs.map((d) => d.name).join(', ')}
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {formData.uploadedDocs.map((d, idx) => (
+                      <span key={idx} style={{ color: 'var(--primary-dark)', fontWeight: 600 }}>
+                        ✓ {d.name} ({d.size})
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>

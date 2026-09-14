@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { ServiceTier } from '../../types';
+import { aiService } from '../../services/aiService';
 
 export const ServiceDetailPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -52,19 +53,42 @@ export const ServiceDetailPage: React.FC = () => {
 
   const categoryName = language === 'hi' ? selectedCategory.nameHi : selectedCategory.name;
 
-  const handleSimulatedPhotoUpload = () => {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleRealPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setSimulatingAi(true);
-    setTimeout(() => {
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64Data = reader.result as string;
+        const result = await aiService.analyzeJobPhoto(
+          base64Data,
+          selectedCategory?.name || 'General Service',
+          problemDescription || 'Inspection photo'
+        );
+        setPhotoEstimate({
+          detected: result.detected,
+          tier: result.tier,
+          confidence: result.confidence,
+          label: result.label,
+        });
+        setSelectedTier(result.tier);
+        setSimulatingAi(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn('Error analyzing photo:', err);
       setSimulatingAi(false);
-      const detectedTier: ServiceTier = selectedCategory.id === 'ac_repair' ? 'MEDIUM' : 'SMALL';
-      setPhotoEstimate({
-        detected: true,
-        tier: detectedTier,
-        confidence: 92,
-        label: `${selectedCategory.name} - Standard complexity detected`,
-      });
-      setSelectedTier(detectedTier);
-    }, 1000);
+    }
+  };
+
+  const handleTriggerPhotoUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const getTierPrice = (tier: ServiceTier) => {
@@ -592,26 +616,35 @@ export const ServiceDetailPage: React.FC = () => {
                 <CheckCircle2 size={11} /> AI Analyzed ({photoEstimate.tier})
               </span>
             ) : (
-              <button
-                type="button"
-                onClick={handleSimulatedPhotoUpload}
-                disabled={simulatingAi}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  color: '#1DAA5C',
-                  fontSize: '0.6875rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: 0,
-                }}
-              >
-                <Sparkles size={12} />
-                <span>{simulatingAi ? 'Scanning...' : 'Scan Photo with AI'}</span>
-              </button>
+              <>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleRealPhotoUpload}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleTriggerPhotoUpload}
+                  disabled={simulatingAi}
+                  style={{
+                    border: 'none',
+                    background: 'none',
+                    color: '#1DAA5C',
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: 0,
+                  }}
+                >
+                  <Sparkles size={12} />
+                  <span>{simulatingAi ? 'Analyzing with AI...' : 'Upload & Analyze Photo'}</span>
+                </button>
+              </>
             )}
           </div>
 

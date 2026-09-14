@@ -14,6 +14,7 @@ import { AdminFinanceView } from '../../components/admin/AdminFinanceView';
 import { AdminReportsView } from '../../components/admin/AdminReportsView';
 import { BookingDetailModal } from '../../components/admin/BookingDetailModal';
 import { AdminNav } from '../../components/admin/AdminNav';
+import { aiService, DemandForecastResult } from '../../services/aiService';
 
 export const AdminDashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('operations');
@@ -24,22 +25,29 @@ export const AdminDashboardPage: React.FC = () => {
   const [currentLocation, setCurrentLocation] = useState<string>(() => {
     return storageService.getItem<string>(STORAGE_KEYS.SELECTED_LOCATION, DEFAULT_LOCATION);
   });
+  const [forecast, setForecast] = useState<DemandForecastResult | null>(null);
   const [stats, setStats] = useState<FederationStats>({
-    totalWorkers: 128,
-    kycVerified: 96,
-    availableNow: 41,
-    activeDispatches: 24,
-    cooperativeNodes: 6,
-    emergencyWorkersReady: 6,
-    todayRevenue: 1225,
-    totalBookingsToday: 54,
+    totalWorkers: 0,
+    kycVerified: 0,
+    availableNow: 0,
+    activeDispatches: 0,
+    cooperativeNodes: 0,
+    emergencyWorkersReady: 0,
+    todayRevenue: 0,
+    totalBookingsToday: 0,
   });
 
   const loadData = async () => {
-    const [kycRes, bookRes, statsRes] = await Promise.all([
+    const savedLoc = storageService.getItem<string>(STORAGE_KEYS.SELECTED_LOCATION, DEFAULT_LOCATION);
+    if (savedLoc) {
+      setCurrentLocation(savedLoc);
+    }
+
+    const [kycRes, bookRes, statsRes, forecastRes] = await Promise.all([
       adminService.getKycQueue(),
       bookingService.getBookings(),
       adminService.getFederationStats(),
+      aiService.getDemandForecast(savedLoc || DEFAULT_LOCATION),
     ]);
 
     if (kycRes.success && kycRes.data) {
@@ -51,10 +59,8 @@ export const AdminDashboardPage: React.FC = () => {
     if (statsRes.success && statsRes.data) {
       setStats(statsRes.data);
     }
-
-    const savedLoc = storageService.getItem<string>(STORAGE_KEYS.SELECTED_LOCATION, DEFAULT_LOCATION);
-    if (savedLoc) {
-      setCurrentLocation(savedLoc);
+    if (forecastRes) {
+      setForecast(forecastRes);
     }
   };
 
@@ -271,14 +277,19 @@ export const AdminDashboardPage: React.FC = () => {
                   <div>
                     <div style={{ fontSize: '0.75rem', fontWeight: 800, color: reallocationApplied ? 'var(--success-dark)' : 'var(--text-primary)' }}>
                       {reallocationApplied
-                        ? `✓ Workload Balanced: 4 Artisans Dispatched to ${currentLocation.split(',')[0]}`
-                        : `Surge Alert: Electrical & AC Repair +42% in ${currentLocation.split(',')[0]} Zone`}
+                        ? `✓ Workload Balanced: ${forecast?.recommendedArtisans || 4} Artisans Dispatched to ${currentLocation.split(',')[0]}`
+                        : `Surge Alert: ${forecast?.category || 'Electrical & AC'} +${forecast ? Math.round((forecast.surgeMultiplier - 1) * 100) : 35}% in ${currentLocation.split(',')[0]} Zone`}
                     </div>
                     <div style={{ fontSize: '0.6875rem', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.35 }}>
                       {reallocationApplied
                         ? 'Sub-15 min arrival SLA protected across all active emergency requests.'
-                        : `Recommendation: Reallocate 4 idle certified electricians to maintain sub-15 min arrival in ${currentLocation.split(',')[0]}.`}
+                        : (forecast?.recommendationNote || `Recommendation: Reallocate ${forecast?.recommendedArtisans || 4} standby certified artisans to maintain sub-15 min SLA.`)}
                     </div>
+                    {forecast && (
+                      <div style={{ fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        Peak Hours: {forecast.peakHours} • 7-Day Projected Jobs: {forecast.projectedBookingsNext7Days}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -288,7 +299,7 @@ export const AdminDashboardPage: React.FC = () => {
                     variant="primary"
                     onClick={() => setReallocationApplied(true)}
                   >
-                    Apply Reallocation (4 Workers)
+                    Apply Reallocation ({forecast?.recommendedArtisans || 4} Workers)
                   </Button>
                 )}
               </div>

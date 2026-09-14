@@ -106,8 +106,8 @@ export const MOST_BOOKED_SERVICES: MarketplaceService[] = [
     badgeHi: 'सर्वाधिक लोकप्रिय',
     description: 'Fix loose switches, sparking sockets, internal fuse & earthing',
     descriptionHi: 'ढीले स्विच, स्पार्किंग सॉकेट, आंतरिक फ्यूज और अर्थिंग सुधार',
-    inclusions: ['Up to 3 switch points diagnosis', '30-day SAHYOG warranty', 'Tested load meter verification'],
-    inclusionsHi: ['3 स्विच पॉइंट तक जांच', '30 दिन सहयोग वारंटी', 'लोड मीटर परीक्षण'],
+    inclusions: ['Up to 3 switch points diagnosis', '30-day AIDORA warranty', 'Tested load meter verification'],
+    inclusionsHi: ['3 स्विच पॉइंट तक जांच', '30 दिन AIDORA वारंटी', 'लोड मीटर परीक्षण'],
   },
   {
     id: 'mb-ac-jet',

@@ -1,7 +1,8 @@
 import React from 'react';
 import { AdminDashboardPage } from '../../pages/admin/AdminDashboardPage';
 import { LanguageToggle } from '../common/LanguageToggle';
-import { Building2, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { Logo } from '../common/Logo';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -41,26 +42,11 @@ export const AdminShell: React.FC = () => {
         className="theme-transition"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: 'var(--radius-xs)',
-              backgroundColor: 'var(--sahyog-green, #1DAA5C)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: 'var(--shadow-xs)',
-              transition: 'background-color var(--transition-theme)',
-            }}
-          >
-            <Building2 size={18} />
-          </div>
+          <Logo size="sm" />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '1.0625rem', fontWeight: 900, color: 'var(--theme-text, #0B0B0B)', letterSpacing: '-0.02em' }}>
-                SAHYOG
+                AIDORA
               </span>
               <span
                 style={{

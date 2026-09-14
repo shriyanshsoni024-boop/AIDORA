@@ -168,8 +168,8 @@ export const WorkerEarningsView: React.FC = () => {
             <div style={{ fontSize: '0.875rem', fontWeight: 900, color: '#065F46' }}>
               Your Labor. Your Earnings.
             </div>
-            <div style={{ fontSize: '0.6875rem', color: '#047857', marginTop: '1px' }}>
-              SAHYOG operates at 0% corporate cut. 100% of service value stays with you.
+            <div style={{ fontSize: '0.75rem', color: '#166534' }}>
+              AIDORA operates at 0% corporate cut. 100% of service value stays with you.
             </div>
           </div>
         </div>

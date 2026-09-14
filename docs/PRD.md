@@ -1,8 +1,8 @@
-# SAHYOG — Product Requirements Document
+# AIDORA — Product Requirements Document
 
 **Version:** 1.0  
 **Status:** MVP / Prototype  
-**Project:** SAHYOG  
+**Project:** AIDORA (formerly SAHYOG)  
 **Primary Development Goal:** Build a functional prototype for Smart India Hackathon / national-level screening.
 
 ---
@@ -11,11 +11,11 @@
 
 ## 1.1 Product Name
 
-**SAHYOG**
+**AIDORA**
 
 ## 1.2 One-Line Idea
 
-**SAHYOG is a cooperative-powered digital service platform that connects customers with verified skilled workers through intelligent matching, while helping cooperatives manage, utilize and plan their workforce.**
+**AIDORA is a cooperative-powered digital service platform that connects customers with verified skilled workers through intelligent matching, while helping cooperatives manage, utilize and plan their workforce.**
 
 ## 1.3 Simple Explanation
 

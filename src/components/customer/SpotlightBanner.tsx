@@ -137,7 +137,7 @@ export const SpotlightBanner: React.FC<SpotlightBannerProps> = ({ onSelectPromot
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.65625rem', color: '#CBD5E1' }}>
             <ShieldCheck size={13} color="#34D399" />
-            <span>{language === 'hi' ? '30-दिन नि:शुल्क वारंटी' : '30-Day SAHYOG Guarantee'}</span>
+            <span>{language === 'hi' ? '30-दिन नि:शुल्क वारंटी' : '30-Day AIDORA Guarantee'}</span>
           </div>
 
           <div

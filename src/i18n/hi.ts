@@ -1,7 +1,7 @@
 import { TranslationKey } from './en';
 
 export const hi: Record<TranslationKey, string> = {
-  app_name: 'सहयोग',
+  app_name: 'AIDORA',
   app_tagline: 'सहकारी कुशल कार्यबल मंच',
   cooperative_backed: 'सहकारी समिति द्वारा सत्यापित एवं समर्थित',
   
@@ -22,7 +22,7 @@ export const hi: Record<TranslationKey, string> = {
   // Categories
   all_services: 'सभी सेवाएं',
   popular_services: 'लोकप्रिय श्रेणियां',
-  cooperative_trust_title: 'सहयोग ही क्यों चुनें?',
+  cooperative_trust_title: 'AIDORA ही क्यों चुनें?',
   trust_kyc_title: '100% KYC सत्यापित',
   trust_kyc_desc: 'प्रत्येक कारीगर क्षेत्रीय सहकारी समितियों द्वारा सत्यापित है',
   trust_skills_title: 'प्रमाणित और बहु-कुशल',
@@ -91,7 +91,7 @@ export const hi: Record<TranslationKey, string> = {
   // Booking Summary & Payment
   booking_summary: 'बुकिंग सारांश',
   service_estimate: 'अनुमानित सेवा शुल्क',
-  connection_fee: 'सहयोग मंच शुल्क',
+  connection_fee: 'AIDORA मंच शुल्क',
   total_estimate: 'कुल अनुमानित राशि',
   final_price_note: 'नोट: मंच शुल्क बुकिंग सुनिश्चित करता है। कार्य सामग्री व अंतिम लागत कार्य पूरा होने पर तय होती है।',
   confirm_booking: 'बुकिंग सुनिश्चित करें',
@@ -115,7 +115,7 @@ export const hi: Record<TranslationKey, string> = {
   rate_worker: 'अपना अनुभव साझा करें -',
   write_review_placeholder: 'सेवा की गुणवत्ता, समय की पाबंदी और व्यवहार पर अपनी समीक्षा लिखें...',
   submit_feedback: 'समीक्षा सबमिट करें',
-  super_coins_earned: 'आपको 25 सहयोग सुपर कॉइन्स मिले!',
+  super_coins_earned: 'आपको 25 AIDORA सुपर कॉइन्स मिले!',
   
   // History & Details
   active_services: 'सक्रिय सेवाएं',

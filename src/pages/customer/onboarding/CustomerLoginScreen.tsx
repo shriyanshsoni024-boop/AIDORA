@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Logo } from '../../../components/common/Logo';
 
 interface CustomerLoginScreenProps {
   onContinue: (phone: string) => void;
@@ -65,8 +66,11 @@ export const CustomerLoginScreen: React.FC<CustomerLoginScreenProps> = ({ onCont
       >
         {/* Top Bar: Brand & Skip Button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <div style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
-            SAHYOG
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Logo size="sm" />
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '-0.03em' }}>
+              AIDORA
+            </div>
           </div>
 
           <button

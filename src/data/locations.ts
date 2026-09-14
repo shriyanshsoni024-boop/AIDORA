@@ -32,7 +32,7 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
 }
 
 /**
- * Finds the nearest supported SAHYOG locality based on GPS coordinates
+ * Finds the nearest supported AIDORA locality based on GPS coordinates
  */
 export function findNearestLocation(lat: number, lng: number): ServiceLocation {
   let nearest = LOCATIONS[0];

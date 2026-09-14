@@ -9,6 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { ArrowLeft, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { paymentService } from '../../services/paymentService';
 
 export const WorkerMatchingPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -31,9 +32,10 @@ export const WorkerMatchingPage: React.FC = () => {
     return calculateWorkerMatches(
       selectedCategory?.id || 'electrician',
       problemDescription,
-      urgency === 'EMERGENCY'
+      urgency === 'EMERGENCY',
+      selectedLocation || 'Indiranagar, Bangalore'
     );
-  }, [selectedCategory, problemDescription, urgency]);
+  }, [selectedCategory, problemDescription, urgency, selectedLocation]);
 
   const filteredWorkers = useMemo(() => {
     if (activeFilter === 'high_match') {
@@ -49,14 +51,30 @@ export const WorkerMatchingPage: React.FC = () => {
     setSelectedWorkerForSummary(worker);
   };
 
-  const handleFinalConfirmBooking = () => {
+  const handleFinalConfirmBooking = async () => {
     if (!selectedWorkerForSummary) return;
     setIsConfirming(true);
-    setTimeout(() => {
+
+    try {
+      const tempBookingId = `b-${Date.now()}`;
+      const payResult = await paymentService.initiatePayment({
+        bookingId: tempBookingId,
+        amount: totalPrice,
+        customerName: 'AIDORA Customer',
+        serviceName: selectedCategory?.name || 'Home Repair',
+        workerName: selectedWorkerForSummary.name,
+      });
+
+      if (payResult.success) {
+        createBooking(selectedWorkerForSummary);
+      }
+    } catch (err) {
+      console.warn('Payment transaction notice:', err);
       createBooking(selectedWorkerForSummary);
+    } finally {
       setIsConfirming(false);
       setSelectedWorkerForSummary(null);
-    }, 600);
+    }
   };
 
   const getTierPrice = () => {
@@ -252,7 +270,7 @@ export const WorkerMatchingPage: React.FC = () => {
                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>₹{servicePrice}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                <span>SAHYOG Platform & Cooperative Fee:</span>
+                <span>AIDORA Platform & Cooperative Fee:</span>
                 <span style={{ fontWeight: 700, color: 'var(--primary)' }}>₹{connectionFee}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>

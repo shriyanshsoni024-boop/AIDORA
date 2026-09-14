@@ -1,4 +1,4 @@
-# SAHYOG — Project Memory
+# AIDORA — Project Memory
 
 > **Purpose:** Maintain the current project context, implementation status, important constraints, and information that should be preserved across development sessions.
 
@@ -6,7 +6,7 @@
 
 # 1. Project Identity
 
-**Project Name:** SAHYOG
+**Project Name:** AIDORA (formerly SAHYOG)
 
 **Project Type:** Cooperative-powered service platform
 
@@ -16,7 +16,7 @@
 
 # 2. Product Context
 
-SAHYOG connects three major groups:
+AIDORA connects three major groups:
 
 - Customers
 - Skilled Workers

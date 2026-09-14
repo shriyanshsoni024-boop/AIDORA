@@ -1,7 +1,8 @@
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useBooking } from '../../context/BookingContext';
-import { ShieldCheck, Phone, Mail, ExternalLink, Heart } from 'lucide-react';
+import { Phone, Mail, ExternalLink, Heart } from 'lucide-react';
+import { Logo } from './Logo';
 
 export const MarketplaceFooter: React.FC = () => {
   const { language } = useLanguage();
@@ -22,22 +23,9 @@ export const MarketplaceFooter: React.FC = () => {
         {/* Top Tier: Brand, Tagline & Helpline */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: 'var(--radius-xs)',
-                backgroundColor: 'var(--sahyog-green, #1DAA5C)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-              }}
-            >
-              <ShieldCheck size={18} strokeWidth={2.5} />
-            </div>
+            <Logo size="sm" />
             <span style={{ fontSize: '1.125rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-              SAHYOG
+              AIDORA
             </span>
             <span
               style={{
@@ -57,18 +45,18 @@ export const MarketplaceFooter: React.FC = () => {
 
           <p style={{ color: '#CBD5E1', fontSize: '0.75rem', lineHeight: 1.4, margin: 0, maxWidth: '640px' }}>
             {language === 'hi'
-              ? 'सहयोग भारत का पहला राष्ट्रीय सहकारी कुशल कार्यबल मंच है, जो कारीगरों को सम्मानजनक आजीविका और ग्राहकों को पारदर्शी व प्रमाणित सेवाएं प्रदान करता है।'
-              : 'SAHYOG is India’s national worker cooperative platform connecting households with verified electricians, plumbers, carpenters, and appliance specialists under transparent, standard rate cards.'}
+              ? 'AIDORA भारत का पहला राष्ट्रीय सहकारी कुशल कार्यबल मंच है, जो कारीगरों को सम्मानजनक आजीविका और ग्राहकों को पारदर्शी व प्रमाणित सेवाएं प्रदान करता है।'
+              : 'AIDORA is India’s national worker cooperative platform connecting households with verified electricians, plumbers, carpenters, and appliance specialists under transparent, standard rate cards.'}
           </p>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '2px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#F8FAFC' }}>
               <Phone size={13} color="#34D399" />
-              <span>24x7 Helpline: <strong>1800-SAHYOG-CARE</strong></span>
+              <span>24x7 Helpline: <strong>1800-AIDORA-CARE</strong></span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#F8FAFC' }}>
               <Mail size={13} color="#34D399" />
-              <span>help@sahyog-coop.org.in</span>
+              <span>help@aidora-coop.org.in</span>
             </div>
           </div>
         </div>
@@ -185,7 +173,7 @@ export const MarketplaceFooter: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>© 2026 SAHYOG National Worker Cooperative Federation Ltd. Made with</span>
+            <span>© 2026 AIDORA National Worker Cooperative Federation Ltd. Made with</span>
             <Heart size={11} color="#EF4444" fill="#EF4444" />
             <span>for Indian Artisans & Citizens.</span>
           </div>

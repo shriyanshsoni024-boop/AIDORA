@@ -2,9 +2,10 @@ import React from 'react';
 import { useWorker } from '../../context/WorkerContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { X, ShieldCheck, Award, Download, CheckCircle, QrCode, Check } from 'lucide-react';
+import { generateSkillCertificatePdf } from '../../services/certificateService';
 
 export const CertificateModal: React.FC = () => {
-  const { showCertificateModal, setShowCertificateModal, activeCertificate } = useWorker();
+  const { showCertificateModal, setShowCertificateModal, activeCertificate, worker } = useWorker();
   const { language } = useLanguage();
 
   if (!showCertificateModal || !activeCertificate) return null;
@@ -78,7 +79,7 @@ export const CertificateModal: React.FC = () => {
               textAlign: 'center',
             }}
           >
-            {/* Top SAHYOG Cooperative Crest */}
+            {/* Top AIDORA Cooperative Crest */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
               <div
                 style={{
@@ -111,7 +112,7 @@ export const CertificateModal: React.FC = () => {
             </div>
 
             <div style={{ fontSize: '0.625rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              SAHYOG NATIONAL WORKER COOPERATIVE FEDERATION
+              AIDORA NATIONAL WORKER COOPERATIVE FEDERATION
             </div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0F172A', margin: '4px 0 2px', fontFamily: 'Georgia, serif' }}>
               Certificate of Trade Competency
@@ -227,7 +228,7 @@ export const CertificateModal: React.FC = () => {
                 textTransform: 'uppercase',
               }}
             >
-              [ Prototype Simulation • SAHYOG Cooperative Skill Registry ]
+              [ Prototype Simulation • AIDORA Cooperative Skill Registry ]
             </div>
           </div>
 
@@ -260,7 +261,14 @@ export const CertificateModal: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                alert('Verified Certificate PDF simulated for download!');
+                if (activeCertificate) {
+                  generateSkillCertificatePdf({
+                    workerName: worker?.name || 'Artisan',
+                    phone: worker?.phone,
+                    trade: worker?.professions?.[0] || 'Technical Specialist',
+                    certificate: activeCertificate,
+                  });
+                }
                 setShowCertificateModal(false);
               }}
               style={{

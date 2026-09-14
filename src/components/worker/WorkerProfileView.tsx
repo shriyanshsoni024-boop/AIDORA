@@ -137,10 +137,10 @@ export const WorkerProfileView: React.FC = () => {
                 }}
               >
                 <Star size={11} fill="#D97706" color="#D97706" />
-                {worker.rating} ({worker.reviewCount || 42} reviews)
+                {worker.rating || 5.0} ({worker.reviewCount || 0} reviews)
               </span>
               <span style={{ fontSize: '0.6875rem', color: '#64748B', fontWeight: 600 }}>
-                • {worker.experienceYears || 6}+ Yrs Exp • {worker.completedJobs} Jobs Done
+                • {worker.experienceYears || 1}+ Yrs Exp • {worker.completedJobs || 0} Jobs Done
               </span>
             </div>
           </div>
@@ -158,12 +158,12 @@ export const WorkerProfileView: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#475569' }}>
             <Phone size={14} color="#64748B" />
-            <span style={{ fontWeight: 600 }}>{worker.phone || '+91 98765 43210'}</span>
+            <span style={{ fontWeight: 600 }}>{worker.phone || 'Registered Phone'}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#475569' }}>
             <MapPin size={14} color="#64748B" />
-            <span style={{ fontWeight: 600 }}>{worker.zone || 'Noida Sector 62'}</span>
+            <span style={{ fontWeight: 600 }}>{worker.zone || 'Bangalore Urban'}</span>
           </div>
         </div>
 

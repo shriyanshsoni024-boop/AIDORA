@@ -278,7 +278,7 @@ export const SkillQuizModal: React.FC = () => {
                   {isPassed
                     ? (language === 'hi'
                         ? 'बधाई हो! आपने 70%+ अंक प्राप्त कर कौशल मानक उत्तीर्ण कर लिया है। आपका सत्यापित प्रमाण पत्र तैयार है।'
-                        : 'Congratulations! You met the 70% proficiency standard. Your SAHYOG trade competency certificate is ready.')
+                        : 'Congratulations! You met the 70% proficiency standard. Your AIDORA trade competency certificate is ready.')
                     : (language === 'hi'
                         ? 'उत्तीर्ण होने के लिए कम से कम 7/10 अंक आवश्यक हैं। कृपया नीचे दिए गए कमजोर क्षेत्रों की समीक्षा करें और दोबारा टेस्ट दें।'
                         : 'Passing requires 7/10 or higher. Review the skill areas needing improvement below and retry the assessment.')}

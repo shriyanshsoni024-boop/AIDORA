@@ -1,4 +1,5 @@
 import { Worker } from '../types';
+import { calculateHaversineDistance, getCoordinatesForLocation } from '../services/geoService';
 
 export const MOCK_WORKERS: Worker[] = [
   {
@@ -163,7 +164,8 @@ export const MOCK_WORKERS: Worker[] = [
 export const calculateWorkerMatches = (
   serviceId: string,
   problemDescription: string,
-  isEmergency: boolean = false
+  isEmergency: boolean = false,
+  customerLocation: string = 'Indiranagar, Bangalore'
 ): Worker[] => {
   const serviceNameMap: Record<string, string> = {
     electrician: 'Electrician',
@@ -177,6 +179,7 @@ export const calculateWorkerMatches = (
   };
 
   const targetProfession = serviceNameMap[serviceId] || 'Electrician';
+  const customerCoords = getCoordinatesForLocation(customerLocation);
 
   return MOCK_WORKERS.map(worker => {
     const isDirectProfession = worker.professions.some(p =>
@@ -194,10 +197,20 @@ export const calculateWorkerMatches = (
       }
     });
 
+    // Compute dynamic Haversine distance if worker has zone coordinates
+    const workerZoneCoords = getCoordinatesForLocation(worker.zone || 'Indiranagar');
+    const computedDistanceKm = calculateHaversineDistance(
+      customerCoords.lat,
+      customerCoords.lng,
+      workerZoneCoords.lat,
+      workerZoneCoords.lng
+    );
+    const activeDistanceKm = computedDistanceKm > 0 ? computedDistanceKm : worker.distanceKm;
+
     // If emergency, prioritize nearer distance and instant availability weight
     const distanceMultiplier = isEmergency ? 3.5 : 2.5;
     const expScore = Math.min(20, Math.round((worker.experienceYears / 10) * 20));
-    const distScore = Math.max(10, Math.min(20, Math.round(20 - worker.distanceKm * distanceMultiplier)));
+    const distScore = Math.max(10, Math.min(20, Math.round(20 - activeDistanceKm * distanceMultiplier)));
     const availScore = worker.availability === 'AVAILABLE' ? 10 : 2;
     const ratingScore = Math.round((worker.rating / 5) * 10);
     const workloadScore = 5;
@@ -207,6 +220,7 @@ export const calculateWorkerMatches = (
 
     return {
       ...worker,
+      distanceKm: activeDistanceKm,
       matchScore: Math.min(98, total),
       matchScoreBreakdown: {
         skillMatch: skillScore,

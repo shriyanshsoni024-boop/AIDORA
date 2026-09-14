@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ArrowRight, User, Mail } from 'lucide-react';
+import { Logo } from '../../../components/common/Logo';
 
 interface PersonalDetailsScreenProps {
   onConfirm: (details: { firstName: string; lastName: string; email: string }) => void;
@@ -62,6 +63,7 @@ export const PersonalDetailsScreen: React.FC<PersonalDetailsScreenProps> = ({ on
         <h1 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
           Profile details
         </h1>
+        <Logo size="xs" style={{ marginLeft: 'auto' }} />
       </div>
 
       {/* Main Content */}

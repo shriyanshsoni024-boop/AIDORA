@@ -1,7 +1,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 
 /**
- * SAHYOG Demo SMS Hook Function
+ * AIDORA Demo SMS Hook Function
  * In demo mode, real SMS dispatch via Fast2SMS/DLT is disabled.
  * Demo OTP is fixed to: 123456
  */

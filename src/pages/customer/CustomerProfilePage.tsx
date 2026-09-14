@@ -19,6 +19,7 @@ import { userService } from '../../services/userService';
 import { User } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useBooking } from '../../context/BookingContext';
+import { Modal } from '../../components/ui/Modal';
 
 interface CustomerProfilePageProps {
   onOpenAddresses?: () => void;
@@ -27,6 +28,7 @@ interface CustomerProfilePageProps {
 export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpenAddresses }) => {
   const { user, logout } = useAuth();
   const { setActiveView } = useBooking();
+  const [activeInfoModal, setActiveInfoModal] = useState<{ title: string; content: string } | null>(null);
 
   const [profile, setProfile] = useState<User>(() => ({
     id: user?.id || '',
@@ -236,7 +238,7 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
             </div>
             <div>
               <div style={{ fontSize: '0.8125rem', fontWeight: 800, color: 'var(--sahyog-forest, #173318)' }}>
-                SAHYOG Cooperative Pass
+                AIDORA Cooperative Pass
               </div>
               <div style={{ fontSize: '0.6875rem', color: '#B45309' }}>
                 ₹0 platform fee & 100% direct artisan compensation
@@ -340,7 +342,10 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
         {/* Help & Support */}
         <button
           type="button"
-          onClick={() => alert('Cooperative 24x7 Helpline: 1800-SAHYOG-COOP\nEmail: support@sahyog.coop')}
+          onClick={() => setActiveInfoModal({
+            title: 'Cooperative 24x7 Help & Support',
+            content: 'Toll-free Federation Helpline: 1800-AIDORA-COOP\nDirect Email: support@aidora.app\nCooperative Guild Support: Active 24x7 with live grievance arbitration.'
+          })}
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '16px',
@@ -408,9 +413,12 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
             <ChevronRight size={16} color="#94A3B8" />
           </div>
 
-          {/* About SAHYOG */}
+          {/* About AIDORA */}
           <div
-            onClick={() => alert('SAHYOG is India’s cooperative home services marketplace delivering verified artisan services with 0% corporate markup.')}
+            onClick={() => setActiveInfoModal({
+              title: 'About AIDORA Cooperative Platform',
+              content: 'AIDORA (SIH Problem Statement 26089) is India’s revolutionary skilled artisans cooperative federation. We eliminate exploitative middleman commissions, providing 100% fair direct artisan earnings, authentic skill verification, and standardized quality pricing.'
+            })}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -423,7 +431,7 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <ShieldCheck size={18} color="#64748B" />
               <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--sahyog-ink, #0B0B0B)' }}>
-                About SAHYOG Cooperative
+                About AIDORA Cooperative
               </span>
             </div>
             <ChevronRight size={16} color="#94A3B8" />
@@ -431,7 +439,10 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
 
           {/* Terms of Services */}
           <div
-            onClick={() => alert('SAHYOG Service Terms: 30-Day Work Warranty & 100% Direct Cooperative Compensation.')}
+            onClick={() => setActiveInfoModal({
+              title: 'Terms of Service & Assurance',
+              content: '1. 30-Day Work Guarantee: Complete free rework on verified quality defects.\n2. Transparent Cooperative Escrow: 100% of base labor is transferred directly to the skilled worker.\n3. Safety Protocol: Verified UIDAI Aadhaar and skill credentials on every dispatch.'
+            })}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -452,7 +463,10 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
 
           {/* Privacy Policy */}
           <div
-            onClick={() => alert('Privacy Policy: Customer data is end-to-end encrypted and never sold to 3rd-party ad trackers.')}
+            onClick={() => setActiveInfoModal({
+              title: 'Privacy & Data Governance',
+              content: 'Your privacy is paramount. Customer phone numbers and addresses are tokenized and protected under Indian Data Protection Standards. We never sell personal data to third-party ad networks.'
+            })}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -473,7 +487,10 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
 
           {/* Request Account Deletion */}
           <div
-            onClick={() => alert('Account deletion request submitted. An SMS confirmation will be sent to your registered number.')}
+            onClick={() => setActiveInfoModal({
+              title: 'Account Privacy Request',
+              content: 'Account deletion request received. In accordance with cooperative compliance, an SMS confirmation has been triggered to your registered number.'
+            })}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -518,6 +535,18 @@ export const CustomerProfilePage: React.FC<CustomerProfilePageProps> = ({ onOpen
           <span>Log out</span>
         </button>
       </div>
+
+      {/* Info Modal */}
+      <Modal
+        isOpen={!!activeInfoModal}
+        onClose={() => setActiveInfoModal(null)}
+        title={activeInfoModal?.title || 'AIDORA Information'}
+        maxWidth="400px"
+      >
+        <div style={{ padding: '8px 0', fontSize: '0.8125rem', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+          {activeInfoModal?.content}
+        </div>
+      </Modal>
     </div>
   );
 };

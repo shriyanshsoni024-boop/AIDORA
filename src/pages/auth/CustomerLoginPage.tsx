@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ArrowRight, MapPin, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { ArrowRight, MapPin, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { Logo } from '../../components/common/Logo';
 import { DEFAULT_LOCATION } from '../../data/locations';
 import { isValidIndianMobile } from '../../lib/supabase';
 
@@ -149,7 +150,7 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
         phone: phone.trim().replace(/\D/g, ''),
         token,
         role: 'customer',
-        name: name.trim() || 'SAHYOG Customer',
+        name: name.trim() || 'AIDORA Customer',
         locality: locality.trim() || DEFAULT_LOCATION,
         email: email.trim() || undefined,
       });
@@ -321,36 +322,9 @@ export const CustomerLoginPage: React.FC<CustomerLoginPageProps> = ({ initialVie
           )}
         </div>
 
-        {/* SAHYOG Branding & Header */}
+        {/* AIDORA Branding & Header */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              backgroundColor: '#1DAA5C',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              marginBottom: '12px',
-            }}
-          >
-            <ShieldCheck size={26} strokeWidth={2.2} />
-          </div>
-
-          <h1
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: '#0B0B0B',
-              letterSpacing: '-0.02em',
-              margin: '0 0 2px',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            SAHYOG
-          </h1>
+          <Logo size="lg" style={{ marginBottom: '14px' }} />
 
           <h2
             style={{

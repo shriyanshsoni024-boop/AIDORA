@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { Logo } from '../../components/common/Logo';
 
 interface SplashScreenProps {
   onDismiss: () => void;
@@ -79,23 +80,8 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
           transition: 'all 600ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        {/* Cooperative Emblem */}
-        <div
-          style={{
-            width: '76px',
-            height: '76px',
-            borderRadius: '22px',
-            backgroundColor: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#1DAA5C',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.25)',
-            marginBottom: '20px',
-          }}
-        >
-          <ShieldCheck size={44} strokeWidth={2.4} />
-        </div>
+        {/* Official AIDORA Logo */}
+        <Logo size="xl" style={{ marginBottom: '20px', filter: 'drop-shadow(0 10px 25px rgba(0, 0, 0, 0.25))' }} />
 
         {/* Brand Name */}
         <h1
@@ -108,7 +94,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onDismiss }) => {
             textShadow: '0 2px 10px rgba(0,0,0,0.15)',
           }}
         >
-          SAHYOG
+          AIDORA
         </h1>
 
         {/* Thin Decorative Line */}

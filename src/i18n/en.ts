@@ -1,5 +1,5 @@
 export const en = {
-  app_name: 'SAHYOG',
+  app_name: 'AIDORA',
   app_tagline: 'Cooperative Skilled Workforce Platform',
   cooperative_backed: 'Cooperative Verified & Backed',
   
@@ -20,7 +20,7 @@ export const en = {
   // Categories
   all_services: 'All Services',
   popular_services: 'Popular Categories',
-  cooperative_trust_title: 'Why Choose SAHYOG?',
+  cooperative_trust_title: 'Why Choose AIDORA?',
   trust_kyc_title: '100% KYC Verified',
   trust_kyc_desc: 'Every worker is verified by regional worker cooperatives',
   trust_skills_title: 'Certified & Multi-Skilled',
@@ -89,7 +89,7 @@ export const en = {
   // Booking Summary & Payment
   booking_summary: 'Booking Summary',
   service_estimate: 'Estimated Service Cost',
-  connection_fee: 'SAHYOG Connection Fee',
+  connection_fee: 'AIDORA Connection Fee',
   total_estimate: 'Total Starting Estimate',
   final_price_note: 'Note: Connection fee confirms your booking. Final labor/material cost is settled upon service completion.',
   confirm_booking: 'Confirm Booking',
@@ -113,7 +113,7 @@ export const en = {
   rate_worker: 'Rate your experience with',
   write_review_placeholder: 'Write a review about the service quality, punctuality, and behavior...',
   submit_feedback: 'Submit Feedback & Complete',
-  super_coins_earned: 'You earned 25 SAHYOG Super Coins!',
+  super_coins_earned: 'You earned 25 AIDORA Super Coins!',
   
   // History & Details
   active_services: 'Active Services',

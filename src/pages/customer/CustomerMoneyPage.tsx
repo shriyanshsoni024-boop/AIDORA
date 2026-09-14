@@ -4,6 +4,7 @@ import { Wallet, Plus, ArrowUpRight, ArrowDownLeft, Gift, ShieldCheck, CreditCar
 export const CustomerMoneyPage: React.FC = () => {
   const [balance, setBalance] = useState<number>(450);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showPassModal, setShowPassModal] = useState<boolean>(false);
   const [addAmount, setAddAmount] = useState<string>('500');
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
 
@@ -29,7 +30,7 @@ export const CustomerMoneyPage: React.FC = () => {
     {
       id: 'tx-3',
       title: 'Welcome Referral Credit',
-      subtitle: 'Joined via SAHYOG Member invite',
+      subtitle: 'Joined via AIDORA Member invite',
       date: '05 Sep 2026',
       amount: '+₹100',
       isCredit: true,
@@ -65,7 +66,7 @@ export const CustomerMoneyPage: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--sahyog-ink, #0B0B0B)', margin: '0 0 2px', letterSpacing: '-0.02em' }}>
-            SAHYOG Money & Credits
+            AIDORA Money & Credits
           </h1>
           <p style={{ fontSize: '0.75rem', color: '#64748B', margin: 0 }}>
             Zero-brokerage credits, instant refunds & cooperative benefits
@@ -119,7 +120,7 @@ export const CustomerMoneyPage: React.FC = () => {
               <Wallet size={18} />
             </div>
             <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.9)' }}>
-              SAHYOG Wallet Balance
+              AIDORA Wallet Balance
             </span>
           </div>
 
@@ -170,7 +171,7 @@ export const CustomerMoneyPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => alert('Cooperative vouchers can be applied directly at checkout!')}
+            onClick={() => setShowPassModal(true)}
             style={{
               flex: 1,
               padding: '10px 14px',
@@ -227,7 +228,7 @@ export const CustomerMoneyPage: React.FC = () => {
               Refer a neighbor & earn ₹100
             </div>
             <div style={{ fontSize: '0.6875rem', color: '#B45309' }}>
-              Your referral code: <strong>SAHYOG100</strong>
+              Your referral code: <strong>AIDORA100</strong>
             </div>
           </div>
         </div>
@@ -420,7 +421,7 @@ export const CustomerMoneyPage: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--sahyog-ink, #0B0B0B)', margin: 0 }}>
-              Add SAHYOG Wallet Balance
+              Add AIDORA Wallet Balance
             </h3>
 
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -464,6 +465,94 @@ export const CustomerMoneyPage: React.FC = () => {
               className="sahyog-btn"
             >
               Add ₹{addAmount} via UPI
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Redeem Pass / Voucher Modal */}
+      {showPassModal && (
+        <div
+          className="animate-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: 'rgba(15, 23, 42, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={() => setShowPassModal(false)}
+        >
+          <div
+            className="animate-modal-enter"
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              padding: '24px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Gift size={22} color="var(--sahyog-green, #1DAA5C)" />
+              <h3 style={{ fontSize: '1.0625rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                Cooperative Voucher & Member Pass
+              </h3>
+            </div>
+
+            <p style={{ fontSize: '0.8125rem', color: '#64748B', lineHeight: 1.5, margin: 0 }}>
+              AIDORA Cooperative member vouchers and referral discounts are auto-applied at checkout for zero corporate surcharge services.
+            </p>
+
+            <div
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px dashed #CBD5E1',
+                borderRadius: '12px',
+                padding: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0F172A' }}>
+                  ACTIVE PASS: COOP2026
+                </div>
+                <div style={{ fontSize: '0.6875rem', color: '#1DAA5C', fontWeight: 700 }}>
+                  ₹50 Off Next Service Booking
+                </div>
+              </div>
+              <span style={{ fontSize: '0.625rem', fontWeight: 800, backgroundColor: '#DCFCE7', color: '#166534', padding: '3px 8px', borderRadius: '6px' }}>
+                READY
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowPassModal(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: 'var(--sahyog-green, #1DAA5C)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '0.875rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              Got it
             </button>
           </div>
         </div>

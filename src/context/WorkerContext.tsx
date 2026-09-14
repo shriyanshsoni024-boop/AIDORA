@@ -153,13 +153,13 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [worker?.id]);
 
-  // Earnings calculations
+  // Earnings calculations from real completed jobs ledger
   const todayEarnings =
     earningsHistory
-      .filter(e => e.date.includes('Today') || e.date.includes('Just now'))
-      .reduce((sum, item) => sum + item.netPayout, 0) || 648;
+      .filter(e => e.date.includes('Today') || e.date.includes('Just now') || e.status === 'PAID')
+      .reduce((sum, item) => sum + item.netPayout, 0);
 
-  const weeklyEarnings = earningsHistory.reduce((sum, item) => sum + item.netPayout, 0) || 1568;
+  const weeklyEarnings = earningsHistory.reduce((sum, item) => sum + item.netPayout, 0);
 
   const setIsAvailable = (val: boolean) => {
     setIsAvailableState(val);
@@ -272,7 +272,7 @@ export const WorkerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ...prev.certificates,
         {
           title: targetModule?.title || `${profession} Certified`,
-          issuer: 'SAHYOG Cooperative Federation',
+          issuer: 'AIDORA Cooperative Federation',
           issuedYear: 2026,
           certificateNumber: certNum,
         },

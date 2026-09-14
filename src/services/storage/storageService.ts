@@ -27,7 +27,7 @@ const DEFAULT_CERTIFICATES: WorkerCertificate[] = [
     score: 9,
     issueDate: '15 Jan 2026',
     expiryDate: '14 Jan 2029',
-    issuer: 'National Skill Development Corp (NSDC) & SAHYOG Federation',
+    issuer: 'National Skill Development Corp (NSDC) & AIDORA Federation',
     isDemo: true,
   },
   {

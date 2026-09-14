@@ -4,6 +4,7 @@ import { useBooking } from '../../context/BookingContext';
 import { LanguageToggle } from './LanguageToggle';
 import { MapPin, ChevronDown, ShieldCheck, User, CalendarCheck, Zap, Check, X, Edit3, LocateFixed, Loader2, AlertCircle, Search } from 'lucide-react';
 import { findNearestLocation } from '../../data/locations';
+import { Logo } from './Logo';
 
 export const Header: React.FC = () => {
   const { language } = useLanguage();
@@ -50,7 +51,8 @@ export const Header: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
-            height: '52px',
+            minHeight: '56px',
+            height: '56px',
             width: '100%',
           }}
         >
@@ -67,23 +69,9 @@ export const Header: React.FC = () => {
                 userSelect: 'none',
                 flexShrink: 0,
               }}
-              title="SAHYOG Home"
+              title="AIDORA Home"
             >
-              <div
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--sahyog-green, #1DAA5C)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  transition: 'background-color var(--transition-theme)',
-                }}
-              >
-                <ShieldCheck size={17} strokeWidth={2.5} />
-              </div>
+              <Logo size="sm" />
               <div>
                 <span
                   style={{
@@ -95,7 +83,7 @@ export const Header: React.FC = () => {
                     display: 'block',
                   }}
                 >
-                  SAHYOG
+                  AIDORA
                 </span>
                 <span
                   style={{
@@ -271,20 +259,7 @@ export const Header: React.FC = () => {
                 userSelect: 'none',
               }}
             >
-              <div
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '5px',
-                  backgroundColor: 'var(--sahyog-green, #1DAA5C)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                }}
-              >
-                <ShieldCheck size={15} strokeWidth={2.5} />
-              </div>
+              <Logo size="xs" />
               <div>
                 <span
                   style={{
@@ -296,7 +271,7 @@ export const Header: React.FC = () => {
                     display: 'block',
                   }}
                 >
-                  SAHYOG
+                  AIDORA
                 </span>
                 <span
                   style={{

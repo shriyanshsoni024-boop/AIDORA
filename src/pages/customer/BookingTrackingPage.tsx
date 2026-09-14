@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Rating } from '../../components/ui/Rating';
 import { StateProgress } from '../../components/ui/StateProgress';
 import { Phone, CheckCircle, Award, Coins, MessageSquare, ArrowLeft, KeyRound, MapPin, Copy, Check, Download } from 'lucide-react';
+import { generateTaxInvoicePdf } from '../../services/invoiceService';
 
 export const BookingTrackingPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -62,7 +63,7 @@ export const BookingTrackingPage: React.FC = () => {
       case 'ACCEPTED': return `${workerName} has accepted your service order and is gearing up.`;
       case 'ON_THE_WAY': return `${workerName} is en route to ${currentBooking.city || 'your area'} (ETA ~12 mins).`;
       case 'IN_PROGRESS': return `Artisan is currently performing ${currentBooking.serviceName} at your premises.`;
-      case 'COMPLETED': return 'Work completed and verified. 30-Day SAHYOG warranty is active.';
+      case 'COMPLETED': return 'Work completed and verified. 30-Day AIDORA warranty is active.';
       case 'CANCELLED': return 'Booking was declined or cancelled.';
       default: return '';
     }
@@ -432,7 +433,7 @@ export const BookingTrackingPage: React.FC = () => {
               variant="outline"
               size="sm"
               leftIcon={<Download size={13} />}
-              onClick={() => alert('Official SAHYOG tax invoice downloaded.')}
+              onClick={() => generateTaxInvoicePdf({ booking: currentBooking })}
             >
               Tax Invoice
             </Button>

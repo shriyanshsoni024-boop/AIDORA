@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { Logo } from '../../../components/common/Logo';
 
 interface CustomerOtpScreenProps {
   phone: string;
@@ -161,6 +162,7 @@ export const CustomerOtpScreen: React.FC<CustomerOtpScreenProps> = ({ phone, onV
         <h1 style={{ fontSize: '1.125rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
           OTP verification
         </h1>
+        <Logo size="xs" style={{ marginLeft: 'auto' }} />
       </div>
 
       {/* Main Content */}

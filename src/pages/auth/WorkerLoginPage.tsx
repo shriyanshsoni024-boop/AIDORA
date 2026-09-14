@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { ShieldCheck, ArrowRight, ArrowLeft, MapPin, Briefcase, Award, Clock, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { ArrowRight, ArrowLeft, MapPin, Briefcase, Award, Clock, RefreshCw, Edit2, AlertCircle, CheckCircle2, MoreVertical } from 'lucide-react';
+import { Logo } from '../../components/common/Logo';
 import { isValidIndianMobile } from '../../lib/supabase';
 import { DEFAULT_LOCATION } from '../../data/locations';
 
@@ -241,7 +242,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
         profession: profession.trim() || 'Electrician',
         skills: parsedSkills.length > 0 ? parsedSkills : [profession],
         experienceYears: parseInt(experienceYears, 10) || 1,
-        cooperativeBranch: cooperativeBranch.trim() || 'SAHYOG Cooperative Federation',
+        cooperativeBranch: cooperativeBranch.trim() || 'AIDORA Cooperative Federation',
         availability,
       });
 
@@ -415,34 +416,7 @@ export const WorkerLoginPage: React.FC<WorkerLoginPageProps> = ({ initialView })
 
         {/* Brand Header */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              backgroundColor: '#1DAA5C',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              marginBottom: '12px',
-            }}
-          >
-            <ShieldCheck size={26} strokeWidth={2.2} />
-          </div>
-
-          <h1
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: '#0B0B0B',
-              letterSpacing: '-0.02em',
-              margin: '0 0 2px',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            SAHYOG
-          </h1>
+          <Logo size="lg" style={{ marginBottom: '14px' }} />
 
           <h2
             style={{

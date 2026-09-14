@@ -183,7 +183,7 @@ export const ProntoHeroHeader: React.FC<ProntoHeroHeaderProps> = ({
             }}
           >
             <Sparkles size={11} />
-            <span>SAHYOG Certified</span>
+            <span>AIDORA Certified</span>
           </div>
 
           <h1

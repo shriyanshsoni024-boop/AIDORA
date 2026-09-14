@@ -5,4 +5,9 @@ export * from './workerService';
 export * from './userService';
 export * from './adminService';
 export * from './auth';
-
+export * from './paymentService';
+export * from './invoiceService';
+export * from './certificateService';
+export * from './aiService';
+export * from './kycService';
+export * from './geoService';

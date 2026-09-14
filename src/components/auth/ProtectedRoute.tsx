@@ -23,7 +23,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole, ch
       },
       worker: {
         title: 'Artisan Pro Access Restricted',
-        subtitle: 'This workspace is restricted to registered & verified SAHYOG cooperative artisans.',
+        subtitle: 'This workspace is restricted to registered & verified AIDORA cooperative artisans.',
         loginPath: '/worker/login',
         accentColor: '#1DAA5C',
       },

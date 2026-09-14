@@ -35,7 +35,7 @@ export const mapRowToWorker = (row: WorkerRow): Worker => {
     availability: row.availability || 'AVAILABLE',
     emergencyAvailable: row.emergency_ready ?? false,
     verificationStatus: row.verification_status || 'PENDING',
-    cooperativeName: row.cooperative_branch || 'SAHYOG Central Federation',
+    cooperativeName: row.cooperative_branch || 'AIDORA Central Federation',
     zone: row.zone || 'Zone 1 - Central',
     aadhaarNumber: row.aadhaar_masked || undefined,
     certificates: (Array.isArray(row.certificates_data) ? row.certificates_data : []) as Worker['certificates'],
@@ -477,7 +477,7 @@ class WorkerService {
         ...currentWorker.certificates,
         {
           title: targetModule?.title || `${profession} Certified`,
-          issuer: 'SAHYOG Cooperative Federation',
+          issuer: 'AIDORA Cooperative Federation',
           issuedYear: 2026,
           certificateNumber: certNum,
         },

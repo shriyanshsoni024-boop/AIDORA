@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Building2, Lock, Mail, Eye, EyeOff, ArrowRight, KeyRound, AlertCircle, MoreVertical } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, KeyRound, AlertCircle, MoreVertical } from 'lucide-react';
+import { Logo } from '../../components/common/Logo';
 
 export const AdminLoginPage: React.FC = () => {
   const { login, navigate } = useAuth();
@@ -191,34 +192,7 @@ export const AdminLoginPage: React.FC = () => {
 
         {/* Brand Header */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              backgroundColor: '#1DAA5C',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              marginBottom: '12px',
-            }}
-          >
-            <Building2 size={26} strokeWidth={2.2} />
-          </div>
-
-          <h1
-            style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              color: '#0B0B0B',
-              letterSpacing: '-0.02em',
-              margin: '0 0 2px',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            SAHYOG
-          </h1>
+          <Logo size="lg" style={{ marginBottom: '14px' }} />
 
           <h2
             style={{
@@ -335,7 +309,7 @@ export const AdminLoginPage: React.FC = () => {
               <input
                 id="admin-email"
                 type="email"
-                placeholder="e.g. operations@sahyog.coop"
+                placeholder="e.g. operations@aidora.coop"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 style={{

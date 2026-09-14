@@ -28,7 +28,7 @@ export const LocationScreen: React.FC<LocationScreenProps> = ({ onLocationSelect
     navigator.geolocation.getCurrentPosition(
       (_position) => {
         setIsDetecting(false);
-        // Map detected coords to nearest supported SAHYOG hub
+        // Map detected coords to nearest supported AIDORA hub
         const detectedArea = 'Indiranagar, Bangalore (Current GPS)';
         onLocationSelected(detectedArea);
       },

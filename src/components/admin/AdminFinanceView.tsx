@@ -4,11 +4,11 @@ import { IndianRupee, CheckCircle2, Clock } from 'lucide-react';
 
 export const AdminFinanceView: React.FC = () => {
   const [finance, setFinance] = useState<FinanceOverview>({
-    todayGrossValue: 12924,
-    workerPayoutsTotal: 12275,
-    cooperativeRevenue: 649,
-    settledCount: 25,
-    pendingCount: 4,
+    todayGrossValue: 0,
+    workerPayoutsTotal: 0,
+    cooperativeRevenue: 0,
+    settledCount: 0,
+    pendingCount: 0,
     transactions: [],
   });
 

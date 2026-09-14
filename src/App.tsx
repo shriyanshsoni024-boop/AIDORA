@@ -12,7 +12,7 @@ import { WorkerLoginPage } from './pages/auth/WorkerLoginPage';
 import { AdminLoginPage } from './pages/auth/AdminLoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { getThemeCssVariables } from './styles/themes';
-import { ShieldCheck } from 'lucide-react';
+import { Logo } from './components/common/Logo';
 
 const AppRouter: React.FC = () => {
   const { session, currentRole, currentPath, isLoading } = useAuth();
@@ -44,24 +44,9 @@ const AppRouter: React.FC = () => {
           fontFamily: 'var(--font-sans)',
         }}
       >
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            backgroundColor: '#1DAA5C',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '16px',
-            boxShadow: '0 8px 24px rgba(29, 170, 92, 0.35)',
-            animation: 'pulse 1.5s infinite ease-in-out',
-          }}
-        >
-          <ShieldCheck size={32} color="#FFFFFF" />
-        </div>
+        <Logo size="lg" style={{ marginBottom: '16px' }} />
         <div style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '6px' }}>
-          SAHYOG
+          AIDORA
         </div>
         <div style={{ fontSize: '0.8125rem', color: '#94A3B8' }}>
           Verifying secure session...

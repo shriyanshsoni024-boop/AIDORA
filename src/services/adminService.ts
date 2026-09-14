@@ -1,7 +1,6 @@
 import { KycItem, ApiResponse, Booking, Worker } from '../types';
 import { STORAGE_KEYS } from './storage/storageKeys';
 import { storageService } from './storage/storageService';
-import { INITIAL_BOOKINGS } from '../data/mockData';
 import { MOCK_WORKERS } from '../data/workers';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Database } from '../types/database';
@@ -118,7 +117,7 @@ class AdminService {
       : Array.isArray(dto.documents)
         ? dto.documents.map((d) => (typeof d === 'string' ? d : d.name)).join(', ')
         : 'Aadhaar, Trade Certificate';
-    const coopName = dto.cooperative || dto.cooperativeBranch || 'SAHYOG Cooperative Federation';
+    const coopName = dto.cooperative || dto.cooperativeBranch || 'AIDORA Cooperative Federation';
 
     const newKycItem: KycItem = {
       id: `v-${Date.now()}`,
@@ -263,27 +262,29 @@ class AdminService {
           supabase.from('bookings').select('id, status, total_price, connection_fee'),
         ]);
 
-        const totalWorkers = workersCountRes.count || 128;
-        const kycVerified = verifiedCountRes.count || 96;
-        const availableNow = availableCountRes.count || 41;
-        const emergencyWorkersReady = emergencyCountRes.count || 14;
+        const totalWorkers = workersCountRes.count || 0;
+        const kycVerified = verifiedCountRes.count || 0;
+        const availableNow = availableCountRes.count || 0;
+        const emergencyWorkersReady = emergencyCountRes.count || 0;
 
         const bookings = (bookingsRes.data || []) as unknown as Pick<BookingRow, 'id' | 'status' | 'total_price' | 'connection_fee'>[];
         const activeDispatches = bookings.filter((b) =>
           ['REQUESTED', 'MATCHED', 'ACCEPTED', 'ON_THE_WAY', 'IN_PROGRESS'].includes(b.status)
         ).length;
 
-        const todayRevenue = bookings.reduce((sum, b) => sum + (b.connection_fee || 25), 0) + 475;
+        const todayRevenue = bookings
+          .filter((b) => b.status !== 'CANCELLED')
+          .reduce((sum, b) => sum + (b.connection_fee || 25), 0);
 
         const stats: FederationStats = {
-          totalWorkers: totalWorkers > 0 ? totalWorkers : 128,
-          kycVerified: kycVerified > 0 ? kycVerified : 96,
-          availableNow: availableNow > 0 ? availableNow : 41,
-          activeDispatches: activeDispatches > 0 ? activeDispatches : 18,
-          cooperativeNodes: 6,
-          emergencyWorkersReady: emergencyWorkersReady > 0 ? emergencyWorkersReady : 14,
+          totalWorkers,
+          kycVerified,
+          availableNow,
+          activeDispatches,
+          cooperativeNodes: totalWorkers > 0 ? Math.max(1, Math.ceil(totalWorkers / 20)) : 0,
+          emergencyWorkersReady,
           todayRevenue,
-          totalBookingsToday: (bookings.length || 0) + 18,
+          totalBookingsToday: bookings.length,
         };
 
         return { success: true, data: stats };
@@ -293,8 +294,8 @@ class AdminService {
     }
 
     try {
-      const workers = storageService.getItem<Worker[]>(STORAGE_KEYS.WORKERS, MOCK_WORKERS);
-      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+      const workers = storageService.getItem<Worker[]>(STORAGE_KEYS.WORKERS, []);
+      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, []);
 
       const activeDispatches = bookings.filter((b) =>
         ['REQUESTED', 'MATCHED', 'ACCEPTED', 'ON_THE_WAY', 'IN_PROGRESS'].includes(b.status)
@@ -306,14 +307,14 @@ class AdminService {
       const completedCount = bookings.filter((b) => b.status === 'COMPLETED').length;
 
       const stats: FederationStats = {
-        totalWorkers: workers.length > 0 ? workers.length + 124 : 128,
-        kycVerified: kycVerified > 0 ? kycVerified + 93 : 96,
-        availableNow: availableNow > 0 ? availableNow + 39 : 41,
-        activeDispatches: activeDispatches > 0 ? activeDispatches : 18,
-        cooperativeNodes: 6,
-        emergencyWorkersReady: emergencyWorkersReady > 0 ? emergencyWorkersReady + 12 : 14,
-        todayRevenue: (completedCount + activeDispatches) * 25 + 475,
-        totalBookingsToday: bookings.length + 18,
+        totalWorkers: workers.length,
+        kycVerified,
+        availableNow,
+        activeDispatches,
+        cooperativeNodes: workers.length > 0 ? Math.max(1, Math.ceil(workers.length / 20)) : 0,
+        emergencyWorkersReady,
+        todayRevenue: (completedCount + activeDispatches) * 25,
+        totalBookingsToday: bookings.length,
       };
 
       return { success: true, data: stats };
@@ -330,30 +331,31 @@ class AdminService {
       try {
         const { data, error } = await supabase
           .from('bookings')
-          .select('id, token, total_price, worker_payout, connection_fee, status, created_at, customer_name, service_name')
+          .select('id, token, total_price, worker_payout, connection_fee, status, created_at, customer_name, service_name, worker_id')
           .order('created_at', { ascending: false });
 
         if (!error && data) {
           const validBookings = data as unknown as (Pick<
             BookingRow,
-            'id' | 'token' | 'total_price' | 'worker_payout' | 'connection_fee' | 'status' | 'created_at' | 'customer_name' | 'service_name'
+            'id' | 'token' | 'total_price' | 'worker_payout' | 'connection_fee' | 'status' | 'created_at' | 'customer_name' | 'service_name' | 'worker_id'
           >)[];
 
-          const todayGrossValue = validBookings.reduce((acc, b) => acc + (b.total_price || 0), 0) + 12450;
-          const workerPayoutsTotal = validBookings.reduce((acc, b) => acc + (b.worker_payout || 0), 0) + 11825;
-          const cooperativeRevenue = validBookings.reduce((acc, b) => acc + (b.connection_fee || 25), 0) + 625;
-          const settledCount = validBookings.filter((b) => b.status === 'COMPLETED').length + 24;
-          const pendingCount = validBookings.filter((b) => b.status !== 'COMPLETED' && b.status !== 'CANCELLED').length + 3;
+          const completedList = validBookings.filter((b) => b.status === 'COMPLETED');
+          const todayGrossValue = completedList.reduce((acc, b) => acc + (b.total_price || 0), 0);
+          const workerPayoutsTotal = completedList.reduce((acc, b) => acc + (b.worker_payout || 0), 0);
+          const cooperativeRevenue = completedList.reduce((acc, b) => acc + (b.connection_fee || 25), 0);
+          const settledCount = completedList.length;
+          const pendingCount = validBookings.filter((b) => b.status !== 'COMPLETED' && b.status !== 'CANCELLED').length;
 
           const transactions = validBookings.map((b) => ({
             id: b.id,
             bookingToken: b.token,
-            workerName: 'Assigned Worker',
-            customerName: b.customer_name,
-            serviceName: b.service_name,
-            grossAmount: b.total_price,
-            workerPayout: b.worker_payout,
-            coopAmount: b.connection_fee,
+            workerName: 'Assigned Artisan',
+            customerName: b.customer_name || 'Customer',
+            serviceName: b.service_name || 'Service',
+            grossAmount: b.total_price || 0,
+            workerPayout: b.worker_payout || 0,
+            coopAmount: b.connection_fee || 25,
             status: (b.status === 'COMPLETED' ? 'PAID' : 'PENDING') as 'PAID' | 'PENDING',
             date: new Date(b.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           }));
@@ -376,18 +378,18 @@ class AdminService {
     }
 
     try {
-      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
+      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, []);
 
       const transactions = bookings.map((b) => {
-        const gross = b.totalPrice || 474;
+        const gross = b.totalPrice || 0;
         const fee = b.connectionFee || 25;
-        const payout = gross - fee;
+        const payout = Math.max(0, gross - fee);
         return {
           id: b.id,
           bookingToken: b.token,
-          workerName: b.worker?.name || 'Assigned Worker',
-          customerName: b.customerName,
-          serviceName: b.serviceName,
+          workerName: b.worker?.name || 'Assigned Artisan',
+          customerName: b.customerName || 'Customer',
+          serviceName: b.serviceName || 'Service',
           grossAmount: gross,
           workerPayout: payout,
           coopAmount: fee,
@@ -396,11 +398,12 @@ class AdminService {
         };
       });
 
-      const todayGrossValue = transactions.reduce((sum, t) => sum + t.grossAmount, 0) + 12450;
-      const workerPayoutsTotal = transactions.reduce((sum, t) => sum + t.workerPayout, 0) + 11825;
-      const cooperativeRevenue = transactions.reduce((sum, t) => sum + t.coopAmount, 0) + 625;
-      const settledCount = transactions.filter((t) => t.status === 'PAID').length + 24;
-      const pendingCount = transactions.filter((t) => t.status === 'PENDING').length + 3;
+      const completedT = transactions.filter((t) => t.status === 'PAID');
+      const todayGrossValue = completedT.reduce((sum, t) => sum + t.grossAmount, 0);
+      const workerPayoutsTotal = completedT.reduce((sum, t) => sum + t.workerPayout, 0);
+      const cooperativeRevenue = completedT.reduce((sum, t) => sum + t.coopAmount, 0);
+      const settledCount = completedT.length;
+      const pendingCount = transactions.filter((t) => t.status === 'PENDING').length;
 
       return {
         success: true,
@@ -419,32 +422,85 @@ class AdminService {
   }
 
   /**
-   * Fetch operational report metrics
+   * Fetch operational report metrics calculated directly from records
    */
   public async getOperationalReports(): Promise<ApiResponse<OperationalReports>> {
     try {
-      const bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, INITIAL_BOOKINGS);
-      const workers = storageService.getItem<Worker[]>(STORAGE_KEYS.WORKERS, MOCK_WORKERS);
+      let bookings: Booking[] = [];
+      let workers: Worker[] = [];
 
-      const completedJobs = bookings.filter((b) => b.status === 'COMPLETED').length + 42;
-      const totalBookings = bookings.length + 48;
-      const cancellationRate = 3.2;
+      if (isSupabaseConfigured()) {
+        const [bRes, wRes] = await Promise.all([
+          supabase.from('bookings').select('*'),
+          supabase.from('workers').select('*'),
+        ]);
+        if (bRes.data) {
+          bookings = (bRes.data as any[]).map((row) => ({
+            id: row.id,
+            token: row.token,
+            serviceName: row.service_name,
+            serviceCategory: row.service_category,
+            totalPrice: row.total_price,
+            status: row.status,
+            city: row.city,
+            address: row.address,
+          } as Booking));
+        }
+        if (wRes.data) {
+          workers = (wRes.data as any[]).map((row) => ({
+            id: row.id,
+            name: row.name,
+            availability: row.availability,
+            zone: row.zone,
+          } as Worker));
+        }
+      } else {
+        bookings = storageService.getItem<Booking[]>(STORAGE_KEYS.BOOKINGS, []);
+        workers = storageService.getItem<Worker[]>(STORAGE_KEYS.WORKERS, []);
+      }
 
-      const topServices = [
-        { name: 'AC Repair & Jet Servicing', count: 28, revenue: 13272 },
-        { name: 'Electrician & Switchboard', count: 24, revenue: 6576 },
-        { name: 'Plumbing & Drainage Line', count: 19, revenue: 5681 },
-        { name: 'Appliance Repair', count: 12, revenue: 4788 },
-        { name: 'Carpentry & Lock Fitting', count: 8, revenue: 2792 },
-      ];
+      const completedJobs = bookings.filter((b) => b.status === 'COMPLETED').length;
+      const totalBookings = bookings.length;
+      const cancelledCount = bookings.filter((b) => b.status === 'CANCELLED').length;
+      const cancellationRate = totalBookings > 0
+        ? Number(((cancelledCount / totalBookings) * 100).toFixed(1))
+        : 0;
 
-      const zoneWorkload = [
-        { zone: 'Indiranagar & Domlur (Zone 4)', activeWorkers: 18, demandIndex: 92 },
-        { zone: 'Koramangala & HSR (Zone 2)', activeWorkers: 14, demandIndex: 88 },
-        { zone: 'Whitefield & Mahadevapura (Zone 6)', activeWorkers: 12, demandIndex: 76 },
-        { zone: 'Jayanagar & JP Nagar (Zone 3)', activeWorkers: 11, demandIndex: 68 },
-        { zone: 'Malleshwaram & Rajajinagar (Zone 1)', activeWorkers: 9, demandIndex: 54 },
-      ];
+      // Group top services
+      const serviceMap: Record<string, { count: number; revenue: number }> = {};
+      bookings.forEach((b) => {
+        const sName = b.serviceName || 'General Service';
+        if (!serviceMap[sName]) serviceMap[sName] = { count: 0, revenue: 0 };
+        serviceMap[sName].count += 1;
+        serviceMap[sName].revenue += (b.totalPrice || 0);
+      });
+
+      const topServices = Object.entries(serviceMap)
+        .map(([name, stat]) => ({ name, count: stat.count, revenue: stat.revenue }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Group zone workload
+      const zoneMap: Record<string, { activeWorkers: number; bookingCount: number }> = {};
+      workers.forEach((w) => {
+        const z = w.zone || 'Central Hub';
+        if (!zoneMap[z]) zoneMap[z] = { activeWorkers: 0, bookingCount: 0 };
+        if (w.availability === 'AVAILABLE') zoneMap[z].activeWorkers += 1;
+      });
+      bookings.forEach((b) => {
+        const z = b.city || 'Central Hub';
+        if (!zoneMap[z]) zoneMap[z] = { activeWorkers: 0, bookingCount: 0 };
+        zoneMap[z].bookingCount += 1;
+      });
+
+      const zoneWorkload = Object.entries(zoneMap)
+        .map(([zone, data]) => {
+          const demandIndex = data.activeWorkers > 0
+            ? Math.min(100, Math.round((data.bookingCount / data.activeWorkers) * 50))
+            : (data.bookingCount > 0 ? 95 : 10);
+          return { zone, activeWorkers: data.activeWorkers, demandIndex };
+        })
+        .slice(0, 5);
 
       return {
         success: true,
@@ -452,7 +508,7 @@ class AdminService {
           todayBookings: totalBookings,
           completedJobs,
           cancellationRate,
-          activeWorkersCount: workers.length > 0 ? workers.length + 38 : 41,
+          activeWorkersCount: workers.filter((w) => w.availability === 'AVAILABLE').length,
           topServices,
           zoneWorkload,
         },

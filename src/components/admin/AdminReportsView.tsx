@@ -4,10 +4,10 @@ import { TrendingUp, CheckCircle, Percent, MapPin } from 'lucide-react';
 
 export const AdminReportsView: React.FC = () => {
   const [reports, setReports] = useState<OperationalReports>({
-    todayBookings: 54,
-    completedJobs: 46,
-    cancellationRate: 3.2,
-    activeWorkersCount: 41,
+    todayBookings: 0,
+    completedJobs: 0,
+    cancellationRate: 0,
+    activeWorkersCount: 0,
     topServices: [],
     zoneWorkload: [],
   });

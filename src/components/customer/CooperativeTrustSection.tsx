@@ -22,7 +22,7 @@ export const CooperativeTrustSection: React.FC = () => {
     },
     {
       icon: Award,
-      title: language === 'hi' ? '30-दिन नि:शुल्क वारंटी' : '30-Day SAHYOG Cover',
+      title: language === 'hi' ? '30-दिन नि:शुल्क वारंटी' : '30-Day AIDORA Cover',
       desc: language === 'hi'
         ? 'संतुष्ट न होने पर 30 दिन के भीतर नि:शुल्क सुधार गारंटी।'
         : 'Free rework protection if the repair has any recurring issue.',
@@ -46,7 +46,7 @@ export const CooperativeTrustSection: React.FC = () => {
     >
       <div style={{ marginBottom: '14px' }}>
         <h2 style={{ fontSize: '1.0625rem', fontWeight: 800, color: '#111827', letterSpacing: '-0.01em', margin: '0 0 3px' }}>
-          {language === 'hi' ? 'सहयोग सहकारी मंच की विशेषताएं' : 'The SAHYOG Cooperative Guarantee'}
+          {language === 'hi' ? 'AIDORA सहकारी मंच की विशेषताएं' : 'The AIDORA Cooperative Guarantee'}
         </h2>
         <p style={{ fontSize: '0.71875rem', color: '#64748B', margin: 0, maxWidth: '640px' }}>
           {language === 'hi'

@@ -39,7 +39,7 @@ export const TopAnnouncementBanner: React.FC<TopAnnouncementBannerProps> = ({
           tag: language === 'hi' ? 'सहकारी गारंटी' : 'Cooperative Cover',
           text: language === 'hi'
             ? '48 सत्यापित कारीगर उपलब्ध • निश्चित दरें, 0% सर्ज एवं 30-दिन नि:शुल्क वारंटी'
-            : '48 Verified Artisans nearby • Upfront standard rates & 30-Day SAHYOG guarantee',
+            : '48 Verified Artisans nearby • Upfront standard rates & 30-Day AIDORA guarantee',
         };
     }
   };

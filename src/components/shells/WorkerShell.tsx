@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { WorkerHomePage } from '../../pages/worker/WorkerHomePage';
 import { WorkerNav } from '../worker/WorkerNav';
-import { HardHat } from 'lucide-react';
 import { LanguageToggle } from '../common/LanguageToggle';
+import { Logo } from '../common/Logo';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useWorker } from '../../context/WorkerContext';
 import { getWorkerTheme } from '../../styles/workerThemes';
@@ -53,27 +53,12 @@ export const WorkerShell: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '12px',
-              backgroundColor: theme.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
-              transition: 'background-color 300ms ease',
-            }}
-          >
-            <HardHat size={20} />
-          </div>
+          <Logo size="sm" />
 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '1.0625rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em' }}>
-                SAHYOG
+                AIDORA
               </span>
               <span
                 style={{

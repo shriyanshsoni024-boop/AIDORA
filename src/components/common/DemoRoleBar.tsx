@@ -57,7 +57,7 @@ export const DemoRoleBar: React.FC<DemoRoleBarProps> = ({ currentRole, onRoleCha
       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
         <Layers size={11} color="#38BDF8" />
         <span style={{ fontWeight: 700, letterSpacing: '0.04em', fontSize: '0.59375rem', color: '#CBD5E1', textTransform: 'uppercase' }}>
-          SAHYOG ROLE VIEW
+          AIDORA ROLE VIEW
         </span>
       </div>
 
