@@ -1,7 +1,7 @@
 -- ==============================================================================
--- SAHYOG — Master Database Schema & Security Definition
+-- AIDORA Cooperative Platform — Master Database Schema & Security Definition
 -- Database: PostgreSQL (Supabase)
--- Version: 1.0.0
+-- Version: 1.1.0
 -- Architecture: Multi-Tenant Indian Consumer Services Cooperative
 -- ==============================================================================
 
@@ -71,11 +71,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT,
     avatar_url TEXT,
     address TEXT NOT NULL DEFAULT '',
-    city TEXT NOT NULL DEFAULT 'Noida',
+    city TEXT NOT NULL DEFAULT 'Bangalore',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON public.profiles;
 CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON public.profiles
     FOR EACH ROW
@@ -101,8 +102,8 @@ CREATE TABLE IF NOT EXISTS public.workers (
     availability worker_availability NOT NULL DEFAULT 'AVAILABLE',
     emergency_ready BOOLEAN NOT NULL DEFAULT FALSE,
     verification_status verification_status NOT NULL DEFAULT 'PENDING',
-    cooperative_branch TEXT NOT NULL DEFAULT 'SAHYOG Central Federation',
-    zone TEXT NOT NULL DEFAULT 'Zone 1 - Central',
+    cooperative_branch TEXT NOT NULL DEFAULT 'AIDORA Central Federation',
+    zone TEXT NOT NULL DEFAULT 'Indiranagar / East Bangalore',
     aadhaar_masked TEXT,
     pan_masked TEXT,
     certificates_data JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -111,6 +112,7 @@ CREATE TABLE IF NOT EXISTS public.workers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_workers_updated_at ON public.workers;
 CREATE TRIGGER update_workers_updated_at
     BEFORE UPDATE ON public.workers
     FOR EACH ROW
@@ -182,6 +184,7 @@ CREATE TABLE IF NOT EXISTS public.bookings (
     completed_at TIMESTAMPTZ
 );
 
+DROP TRIGGER IF EXISTS update_bookings_updated_at ON public.bookings;
 CREATE TRIGGER update_bookings_updated_at
     BEFORE UPDATE ON public.bookings
     FOR EACH ROW
@@ -230,12 +233,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_log_booking_status ON public.bookings;
 CREATE TRIGGER trigger_log_booking_status
     AFTER INSERT OR UPDATE OF status ON public.bookings
     FOR EACH ROW
     EXECUTE FUNCTION log_booking_status_change();
 
--- 4.6 WORKER EARNINGS
+-- 4.6 PAYMENTS TABLE
+CREATE TABLE IF NOT EXISTS public.payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
+    booking_token TEXT NOT NULL,
+    customer_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    customer_name TEXT NOT NULL DEFAULT 'Customer',
+    worker_id UUID REFERENCES public.workers(id) ON DELETE SET NULL,
+    amount INT NOT NULL CHECK (amount >= 0),
+    currency TEXT NOT NULL DEFAULT 'INR',
+    payment_method TEXT NOT NULL DEFAULT 'Razorpay / UPI Escrow',
+    payment_status TEXT NOT NULL DEFAULT 'PAID' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
+    razorpay_payment_id TEXT,
+    razorpay_order_id TEXT,
+    razorpay_signature TEXT,
+    notes JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON public.payments;
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON public.payments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON public.payments(booking_id);
+CREATE INDEX IF NOT EXISTS idx_payments_customer_id ON public.payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_worker_id ON public.payments(worker_id);
+CREATE INDEX IF NOT EXISTS idx_payments_razorpay_id ON public.payments(razorpay_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(payment_status);
+CREATE INDEX IF NOT EXISTS idx_payments_created_at ON public.payments(created_at DESC);
+
+-- 4.7 WORKER EARNINGS
 CREATE TABLE IF NOT EXISTS public.worker_earnings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     worker_id UUID NOT NULL REFERENCES public.workers(id) ON DELETE CASCADE,
@@ -251,8 +288,49 @@ CREATE TABLE IF NOT EXISTS public.worker_earnings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_worker_earnings_worker ON public.worker_earnings(worker_id);
+CREATE INDEX IF NOT EXISTS idx_worker_earnings_booking ON public.worker_earnings(booking_id);
 
--- 4.7 REVIEWS
+-- Auto Earnings Trigger on Booking Completion
+CREATE OR REPLACE FUNCTION record_worker_earnings_on_completion()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF (NEW.status = 'COMPLETED' AND (OLD.status IS DISTINCT FROM 'COMPLETED') AND NEW.worker_id IS NOT NULL) THEN
+        INSERT INTO public.worker_earnings (
+            worker_id,
+            booking_id,
+            booking_token,
+            service_name,
+            customer_name,
+            amount,
+            platform_fee,
+            net_payout,
+            status,
+            created_at
+        )
+        VALUES (
+            NEW.worker_id,
+            NEW.id,
+            NEW.token,
+            NEW.service_name,
+            NEW.customer_name,
+            NEW.total_price,
+            NEW.connection_fee,
+            NEW.worker_payout,
+            'PAID',
+            NOW()
+        );
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_auto_record_worker_earnings ON public.bookings;
+CREATE TRIGGER trigger_auto_record_worker_earnings
+    AFTER UPDATE OF status ON public.bookings
+    FOR EACH ROW
+    EXECUTE FUNCTION record_worker_earnings_on_completion();
+
+-- 4.8 REVIEWS
 CREATE TABLE IF NOT EXISTS public.reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     booking_id UUID REFERENCES public.bookings(id) ON DELETE SET NULL,
@@ -267,8 +345,9 @@ CREATE TABLE IF NOT EXISTS public.reviews (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reviews_worker ON public.reviews(worker_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_booking ON public.reviews(booking_id);
 
--- 4.8 KYC RECORDS
+-- 4.9 KYC RECORDS
 CREATE TABLE IF NOT EXISTS public.kyc_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     worker_id UUID REFERENCES public.workers(id) ON DELETE CASCADE,
@@ -285,6 +364,7 @@ CREATE TABLE IF NOT EXISTS public.kyc_records (
 );
 
 CREATE INDEX IF NOT EXISTS idx_kyc_status ON public.kyc_records(status);
+CREATE INDEX IF NOT EXISTS idx_kyc_worker ON public.kyc_records(worker_id);
 
 -- 5. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -292,6 +372,7 @@ ALTER TABLE public.workers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.booking_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.worker_earnings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kyc_records ENABLE ROW LEVEL SECURITY;
@@ -310,29 +391,47 @@ RETURNS BOOLEAN AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- Profiles Policies
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id OR public.is_admin_or_cooperative());
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Admins have full access to profiles" ON public.profiles;
 CREATE POLICY "Admins have full access to profiles" ON public.profiles FOR ALL USING (public.is_admin_or_cooperative());
 
 -- Services Policies
+DROP POLICY IF EXISTS "Anyone can view active services catalog" ON public.services;
 CREATE POLICY "Anyone can view active services catalog" ON public.services FOR SELECT TO PUBLIC USING (TRUE);
+
+DROP POLICY IF EXISTS "Admins can manage services catalog" ON public.services;
 CREATE POLICY "Admins can manage services catalog" ON public.services FOR ALL USING (public.is_admin_or_cooperative());
 
 -- Workers Policies
+DROP POLICY IF EXISTS "Anyone can view verified workers directory" ON public.workers;
 CREATE POLICY "Anyone can view verified workers directory" ON public.workers FOR SELECT TO PUBLIC USING (TRUE);
+
+DROP POLICY IF EXISTS "Workers can update own worker record" ON public.workers;
 CREATE POLICY "Workers can update own worker record" ON public.workers FOR UPDATE USING (profile_id = auth.uid() OR public.is_admin_or_cooperative());
+
+DROP POLICY IF EXISTS "Admins can manage workers" ON public.workers;
 CREATE POLICY "Admins can manage workers" ON public.workers FOR ALL USING (public.is_admin_or_cooperative());
 
 -- Bookings Policies
+DROP POLICY IF EXISTS "Customers can view their own bookings" ON public.bookings;
 CREATE POLICY "Customers can view their own bookings" ON public.bookings FOR SELECT USING (
     customer_id = auth.uid()
     OR worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid())
     OR (status IN ('REQUESTED', 'MATCHED') AND public.get_auth_user_role() = 'worker')
     OR public.is_admin_or_cooperative()
 );
+
+DROP POLICY IF EXISTS "Customers can create bookings" ON public.bookings;
 CREATE POLICY "Customers can create bookings" ON public.bookings FOR INSERT WITH CHECK (
     customer_id = auth.uid() OR customer_id IS NULL OR public.is_admin_or_cooperative()
 );
+
+DROP POLICY IF EXISTS "Permitted parties can update bookings" ON public.bookings;
 CREATE POLICY "Permitted parties can update bookings" ON public.bookings FOR UPDATE USING (
     customer_id = auth.uid()
     OR worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid())
@@ -340,6 +439,7 @@ CREATE POLICY "Permitted parties can update bookings" ON public.bookings FOR UPD
 );
 
 -- Status History Policies
+DROP POLICY IF EXISTS "Participants and admins can view status history" ON public.booking_status_history;
 CREATE POLICY "Participants and admins can view status history" ON public.booking_status_history FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM public.bookings b
@@ -351,30 +451,68 @@ CREATE POLICY "Participants and admins can view status history" ON public.bookin
         )
     )
 );
+
+DROP POLICY IF EXISTS "Authenticated users can insert status history" ON public.booking_status_history;
 CREATE POLICY "Authenticated users can insert status history" ON public.booking_status_history FOR INSERT WITH CHECK (TRUE);
 
+-- Payments Policies
+DROP POLICY IF EXISTS "Customers can view own payments" ON public.payments;
+CREATE POLICY "Customers can view own payments" ON public.payments FOR SELECT USING (
+    customer_id = auth.uid()
+    OR booking_id IN (SELECT id FROM public.bookings WHERE customer_id = auth.uid())
+    OR public.is_admin_or_cooperative()
+);
+
+DROP POLICY IF EXISTS "Workers can view payments for their bookings" ON public.payments;
+CREATE POLICY "Workers can view payments for their bookings" ON public.payments FOR SELECT USING (
+    worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid())
+    OR booking_id IN (SELECT b.id FROM public.bookings b JOIN public.workers w ON b.worker_id = w.id WHERE w.profile_id = auth.uid())
+    OR public.is_admin_or_cooperative()
+);
+
+DROP POLICY IF EXISTS "Authenticated users can record payments" ON public.payments;
+CREATE POLICY "Authenticated users can record payments" ON public.payments FOR INSERT WITH CHECK (
+    customer_id = auth.uid() OR customer_id IS NULL OR auth.uid() IS NOT NULL OR public.is_admin_or_cooperative()
+);
+
+DROP POLICY IF EXISTS "Admins have full access to payments" ON public.payments;
+CREATE POLICY "Admins have full access to payments" ON public.payments FOR ALL USING (public.is_admin_or_cooperative());
+
 -- Worker Earnings Policies
+DROP POLICY IF EXISTS "Workers can view own earnings ledger" ON public.worker_earnings;
 CREATE POLICY "Workers can view own earnings ledger" ON public.worker_earnings FOR SELECT USING (
     worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid()) OR public.is_admin_or_cooperative()
 );
+
+DROP POLICY IF EXISTS "Workers can record completed job earnings" ON public.worker_earnings;
 CREATE POLICY "Workers can record completed job earnings" ON public.worker_earnings FOR INSERT WITH CHECK (
     worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid()) OR public.is_admin_or_cooperative() OR worker_id IS NOT NULL
 );
+
+DROP POLICY IF EXISTS "Admins can manage worker earnings ledger" ON public.worker_earnings;
 CREATE POLICY "Admins can manage worker earnings ledger" ON public.worker_earnings FOR ALL USING (public.is_admin_or_cooperative());
 
 -- Reviews Policies
+DROP POLICY IF EXISTS "Anyone can view approved reviews" ON public.reviews;
 CREATE POLICY "Anyone can view approved reviews" ON public.reviews FOR SELECT TO PUBLIC USING (TRUE);
+
+DROP POLICY IF EXISTS "Customers can create reviews for their bookings" ON public.reviews;
 CREATE POLICY "Customers can create reviews for their bookings" ON public.reviews FOR INSERT WITH CHECK (
     customer_id = auth.uid() OR customer_id IS NULL OR public.is_admin_or_cooperative()
 );
 
 -- KYC Policies
+DROP POLICY IF EXISTS "Workers can view own KYC documents" ON public.kyc_records;
 CREATE POLICY "Workers can view own KYC documents" ON public.kyc_records FOR SELECT USING (
     worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid()) OR public.is_admin_or_cooperative()
 );
+
+DROP POLICY IF EXISTS "Workers can submit KYC documents" ON public.kyc_records;
 CREATE POLICY "Workers can submit KYC documents" ON public.kyc_records FOR INSERT WITH CHECK (
     worker_id IN (SELECT id FROM public.workers WHERE profile_id = auth.uid()) OR public.is_admin_or_cooperative()
 );
+
+DROP POLICY IF EXISTS "Admins can verify/manage KYC records" ON public.kyc_records;
 CREATE POLICY "Admins can verify/manage KYC records" ON public.kyc_records FOR ALL USING (public.is_admin_or_cooperative());
 
 -- 6. REALTIME REPLICATION
@@ -382,8 +520,23 @@ ALTER TABLE public.bookings REPLICA IDENTITY FULL;
 ALTER TABLE public.booking_status_history REPLICA IDENTITY FULL;
 ALTER TABLE public.workers REPLICA IDENTITY FULL;
 ALTER TABLE public.kyc_records REPLICA IDENTITY FULL;
+ALTER TABLE public.payments REPLICA IDENTITY FULL;
 
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.bookings; EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.booking_status_history; EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.workers; EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.kyc_records; EXCEPTION WHEN duplicate_object THEN null; END $$;
+DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.payments; EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- 7. STORAGE BUCKETS SETUP
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+    ('kyc-documents', 'kyc-documents', FALSE, 52428800, ARRAY['application/pdf', 'image/jpeg', 'image/png', 'image/webp']),
+    ('avatars', 'avatars', TRUE, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+    ('service-photos', 'service-photos', TRUE, 20971520, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+    ('worker-certificates', 'worker-certificates', TRUE, 26214400, ARRAY['application/pdf', 'image/jpeg', 'image/png', 'image/webp']),
+    ('service-images', 'service-images', TRUE, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET
+    public = EXCLUDED.public,
+    file_size_limit = EXCLUDED.file_size_limit,
+    allowed_mime_types = EXCLUDED.allowed_mime_types;

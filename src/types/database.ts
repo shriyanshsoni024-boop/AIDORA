@@ -386,6 +386,63 @@ export interface Database {
         };
         Relationships: [];
       };
+      payments: {
+        Row: {
+          id: string;
+          booking_id: string | null;
+          booking_token: string;
+          customer_id: string | null;
+          customer_name: string;
+          worker_id: string | null;
+          amount: number;
+          currency: string;
+          payment_method: string;
+          payment_status: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+          razorpay_payment_id: string | null;
+          razorpay_order_id: string | null;
+          razorpay_signature: string | null;
+          notes: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          booking_id?: string | null;
+          booking_token: string;
+          customer_name?: string;
+          customer_id?: string | null;
+          worker_id?: string | null;
+          amount: number;
+          currency?: string;
+          payment_method?: string;
+          payment_status?: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+          razorpay_payment_id?: string | null;
+          razorpay_order_id?: string | null;
+          razorpay_signature?: string | null;
+          notes?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          booking_id?: string | null;
+          booking_token?: string;
+          customer_id?: string | null;
+          customer_name?: string;
+          worker_id?: string | null;
+          amount?: number;
+          currency?: string;
+          payment_method?: string;
+          payment_status?: 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+          razorpay_payment_id?: string | null;
+          razorpay_order_id?: string | null;
+          razorpay_signature?: string | null;
+          notes?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       reviews: {
         Row: {
           id: string;

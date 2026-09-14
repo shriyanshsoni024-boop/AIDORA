@@ -117,8 +117,15 @@ class PaymentService {
                 paymentMethod: 'Razorpay / UPI Escrow',
               };
 
-              // Update Supabase payment status in background
-              await this.recordPaymentSuccess(details.bookingId, paymentResult.paymentId!);
+              // Update Supabase payment status & insert into payments table
+              await this.recordPaymentSuccess(details.bookingId, paymentResult.paymentId!, {
+                bookingToken: details.bookingToken,
+                customerName: details.customerName,
+                amount: details.amount,
+                orderId: response.razorpay_order_id,
+                signature: response.razorpay_signature,
+                paymentMethod: 'Razorpay / UPI Escrow',
+              });
               resolve(paymentResult);
             },
             modal: {
@@ -160,23 +167,55 @@ class PaymentService {
   }
 
   /**
-   * Records payment success in Supabase database
+   * Records payment success in Supabase database (bookings + payments table)
    */
-  public async recordPaymentSuccess(bookingId: string, _paymentId: string): Promise<boolean> {
+  public async recordPaymentSuccess(
+    bookingId: string,
+    paymentId: string,
+    meta?: {
+      bookingToken?: string;
+      customerName?: string;
+      amount?: number;
+      orderId?: string;
+      signature?: string;
+      paymentMethod?: string;
+    }
+  ): Promise<boolean> {
     try {
       if (supabase && !bookingId.startsWith('b-')) {
-        const { error } = await supabase
+        // 1. Update booking payment_status
+        const { error: bErr } = await supabase
           .from('bookings')
           .update({
             payment_status: 'PAID',
           })
           .eq('id', bookingId);
 
-        if (error) {
-          console.warn('Could not update payment_status in Supabase:', error.message);
-        } else {
-          return true;
+        if (bErr) {
+          console.warn('Could not update payment_status in Supabase:', bErr.message);
         }
+
+        // 2. Insert into payments table
+        const { error: pErr } = await supabase
+          .from('payments')
+          .insert({
+            booking_id: bookingId,
+            booking_token: meta?.bookingToken || `SYH-${bookingId.slice(-5)}`,
+            customer_name: meta?.customerName || 'AIDORA Customer',
+            amount: meta?.amount || 0,
+            currency: 'INR',
+            payment_method: meta?.paymentMethod || 'Razorpay / UPI Escrow',
+            payment_status: 'PAID',
+            razorpay_payment_id: paymentId,
+            razorpay_order_id: meta?.orderId || null,
+            razorpay_signature: meta?.signature || null,
+          });
+
+        if (pErr) {
+          console.warn('Could not insert payment record into payments table:', pErr.message);
+        }
+
+        return true;
       }
       return true;
     } catch (err) {
