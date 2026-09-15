@@ -48,12 +48,12 @@ export const ResourcesPage: React.FC = () => {
           </p>
         </section>
 
-        {/* Resource Cards Grid */}
+        {/* Resource Cards Grid (Exact 4 Cards, Balanced 2x2 on Desktop, 1 Column on Mobile) */}
         <section className="resources-grid" aria-label="Project Resource Links">
           {/* 1. Live Application (Featured) */}
           <a
             className="resources-card featured"
-            href="https://aidora.in"
+            href="https://aidora-eta.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -90,23 +90,35 @@ export const ResourcesPage: React.FC = () => {
             </span>
           </a>
 
-          {/* 3. Documentation (Clean Placeholder / Disabled) */}
-          <div className="resources-card disabled" aria-disabled="true">
+          {/* 3. Documentation (Active Link to /resources/documentation) */}
+          <a
+            className="resources-card"
+            href="/resources/documentation"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/resources/documentation');
+            }}
+          >
             <div className="resources-card-top">
               <span className="resources-icon" aria-hidden="true">▤</span>
               <span className="resources-tag neutral">DOCS</span>
             </div>
             <div>
               <h2>Documentation</h2>
-              <p>Project notes, architecture, setup details and implementation references.</p>
+              <p>Architecture, implementation, technology stack, current capabilities and production roadmap.</p>
             </div>
-            <span className="resources-card-link muted">
-              Add document link <b>→</b>
+            <span className="resources-card-link">
+              Read documentation <b>→</b>
             </span>
-          </div>
+          </a>
 
-          {/* 4. Presentation (Clean Placeholder / Disabled) */}
-          <div className="resources-card disabled" aria-disabled="true">
+          {/* 4. Presentation (Active Link) */}
+          <a
+            className="resources-card"
+            href="https://1drv.ms/p/c/4715259fb5029137/IQCEjTM7szslQZwuscXeh885AbPIWPSW8XivwHaa2i5Ffng?e=zhTUv3"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <div className="resources-card-top">
               <span className="resources-icon" aria-hidden="true">▣</span>
               <span className="resources-tag neutral">PRESENTATION</span>
@@ -115,40 +127,10 @@ export const ResourcesPage: React.FC = () => {
               <h2>Presentation</h2>
               <p>Project presentation with the idea, solution, workflow and key features.</p>
             </div>
-            <span className="resources-card-link muted">
-              Add presentation link <b>→</b>
+            <span className="resources-card-link">
+              View presentation <b>→</b>
             </span>
-          </div>
-
-          {/* 5. Demo Video (Clean Placeholder / Disabled) */}
-          <div className="resources-card disabled" aria-disabled="true">
-            <div className="resources-card-top">
-              <span className="resources-icon" aria-hidden="true">▶</span>
-              <span className="resources-tag neutral">DEMO</span>
-            </div>
-            <div>
-              <h2>Demo Video</h2>
-              <p>A quick walkthrough showing how AIDORA works from booking to completion.</p>
-            </div>
-            <span className="resources-card-link muted">
-              Add video link <b>→</b>
-            </span>
-          </div>
-
-          {/* 6. Project Files (Clean Placeholder / Disabled) */}
-          <div className="resources-card disabled" aria-disabled="true">
-            <div className="resources-card-top">
-              <span className="resources-icon" aria-hidden="true">↓</span>
-              <span className="resources-tag neutral">FILES</span>
-            </div>
-            <div>
-              <h2>Project Files</h2>
-              <p>Useful supporting files, diagrams and other material related to the project.</p>
-            </div>
-            <span className="resources-card-link muted">
-              Add file link <b>→</b>
-            </span>
-          </div>
+          </a>
         </section>
 
         {/* Footer */}
@@ -159,11 +141,11 @@ export const ResourcesPage: React.FC = () => {
           </div>
           <a
             className="resources-footer-right"
-            href="https://aidora.in"
+            href="https://aidora-eta.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            aidora.in ↗
+            aidora-eta.vercel.app ↗
           </a>
         </footer>
       </main>

@@ -15,6 +15,7 @@ import { getThemeCssVariables } from './styles/themes';
 import { Logo } from './components/common/Logo';
 
 import { ResourcesPage } from './pages/public/ResourcesPage';
+import { DocumentationPage } from './pages/public/DocumentationPage';
 
 const AppRouter: React.FC = () => {
   const { session, currentRole, currentPath, isLoading } = useAuth();
@@ -30,6 +31,7 @@ const AppRouter: React.FC = () => {
     currentPath === '/worker/signup' ||
     currentPath === '/admin/login' ||
     currentPath === '/resources' ||
+    currentPath === '/resources/documentation' ||
     (!session.isAuthenticated && currentPath === '/');
 
   // Loading state during initial Supabase session verification
@@ -59,9 +61,12 @@ const AppRouter: React.FC = () => {
   }
 
   const renderCurrentView = () => {
-    // 0. Public Project Resources Route
+    // 0. Public Project Resources Routes
     if (currentPath === '/resources') {
       return <ResourcesPage />;
+    }
+    if (currentPath === '/resources/documentation') {
+      return <DocumentationPage />;
     }
 
     // 1. Standalone Login Routes & Unauthenticated Root
