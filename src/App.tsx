@@ -1,6 +1,6 @@
 import React from 'react';
 import { LanguageProvider } from './i18n/LanguageContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth, normalizePath } from './context/AuthContext';
 import { BookingProvider } from './context/BookingContext';
 import { WorkerProvider } from './context/WorkerContext';
 import { TopAnnouncementBanner } from './components/common/TopAnnouncementBanner';
@@ -19,20 +19,21 @@ import { DocumentationPage } from './pages/public/DocumentationPage';
 
 const AppRouter: React.FC = () => {
   const { session, currentRole, currentPath, isLoading } = useAuth();
+  const normalizedPath = normalizePath(currentPath);
 
   const themeKey = currentRole === 'admin' ? 'cooperative' : currentRole;
   const themeVariables = getThemeCssVariables(themeKey);
 
   // Check if we are on a standalone public page or login page
   const isStandalonePage =
-    currentPath === '/customer/login' ||
-    currentPath === '/customer/signup' ||
-    currentPath === '/worker/login' ||
-    currentPath === '/worker/signup' ||
-    currentPath === '/admin/login' ||
-    currentPath === '/resources' ||
-    currentPath === '/resources/documentation' ||
-    (!session.isAuthenticated && currentPath === '/');
+    normalizedPath === '/customer/login' ||
+    normalizedPath === '/customer/signup' ||
+    normalizedPath === '/worker/login' ||
+    normalizedPath === '/worker/signup' ||
+    normalizedPath === '/admin/login' ||
+    normalizedPath === '/resources' ||
+    normalizedPath === '/resources/documentation' ||
+    (!session.isAuthenticated && normalizedPath === '/');
 
   // Loading state during initial Supabase session verification
   if (isLoading) {
@@ -62,31 +63,31 @@ const AppRouter: React.FC = () => {
 
   const renderCurrentView = () => {
     // 0. Public Project Resources Routes
-    if (currentPath === '/resources') {
+    if (normalizedPath === '/resources') {
       return <ResourcesPage />;
     }
-    if (currentPath === '/resources/documentation') {
+    if (normalizedPath === '/resources/documentation') {
       return <DocumentationPage />;
     }
 
     // 1. Standalone Login Routes & Unauthenticated Root
-    if (currentPath === '/customer/login' || currentPath === '/customer/signup') {
+    if (normalizedPath === '/customer/login' || normalizedPath === '/customer/signup') {
       return <CustomerLoginPage />;
     }
-    if (currentPath === '/worker/login' || currentPath === '/worker/signup') {
+    if (normalizedPath === '/worker/login' || normalizedPath === '/worker/signup') {
       return <WorkerLoginPage />;
     }
-    if (currentPath === '/admin/login') {
+    if (normalizedPath === '/admin/login') {
       return <AdminLoginPage />;
     }
 
     // If unauthenticated on root "/", ALWAYS show the real customer login page
-    if (!session.isAuthenticated && currentPath === '/') {
+    if (!session.isAuthenticated && normalizedPath === '/') {
       return <CustomerLoginPage />;
     }
 
     // 2. Protected Worker Routes
-    if (currentPath.startsWith('/worker')) {
+    if (normalizedPath.startsWith('/worker')) {
       return (
         <ProtectedRoute requiredRole="worker">
           <WorkerShell />
@@ -95,7 +96,7 @@ const AppRouter: React.FC = () => {
     }
 
     // 3. Protected Admin Routes
-    if (currentPath.startsWith('/admin')) {
+    if (normalizedPath.startsWith('/admin')) {
       return (
         <ProtectedRoute requiredRole="admin">
           <AdminShell />
@@ -104,7 +105,7 @@ const AppRouter: React.FC = () => {
     }
 
     // 4. Authenticated Root ("/") Routing by User Role
-    if (currentPath === '/') {
+    if (normalizedPath === '/') {
       if (session.role === 'worker') {
         return (
           <ProtectedRoute requiredRole="worker">

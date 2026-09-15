@@ -59,19 +59,21 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export const normalizePath = (p?: string): string => {
+  if (!p) return '/';
+  const clean = p.trim().replace(/^#/, '').split('?')[0].split('#')[0];
+  const withoutTrailing = clean.length > 1 ? clean.replace(/\/+$/, '') : clean;
+  return withoutTrailing.startsWith('/') ? withoutTrailing : `/${withoutTrailing}`;
+};
+
 // Normalize initial path from window.location
 const getInitialPath = (): string => {
   if (typeof window === 'undefined') return '/';
-  const path = window.location.pathname;
   const hash = window.location.hash.replace(/^#/, '');
-
   if (hash && hash.startsWith('/')) {
-    return hash;
+    return normalizePath(hash);
   }
-  if (path) {
-    return path;
-  }
-  return '/';
+  return normalizePath(window.location.pathname);
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -95,10 +97,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Navigate helper with history pushState and hash synchronization
   const navigate = useCallback((path: string) => {
-    setCurrentPath(path);
+    const norm = normalizePath(path);
+    setCurrentPath(norm);
     if (typeof window !== 'undefined') {
-      window.history.pushState({}, '', path);
-      window.location.hash = path;
+      window.history.pushState({}, '', norm);
+      window.location.hash = norm;
     }
   }, []);
 
