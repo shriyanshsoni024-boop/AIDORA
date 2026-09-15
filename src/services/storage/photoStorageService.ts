@@ -69,9 +69,20 @@ class PhotoStorageService {
       // Non-fatal, continue
     }
 
-    const cleanUserId = userId || 'temp-user';
+    let cleanUserId = userId;
+    if (!cleanUserId && isSupabaseConfigured()) {
+      try {
+        const { data } = await supabase.auth.getSession();
+        cleanUserId = data.session?.user?.id || 'temp-user';
+      } catch {
+        cleanUserId = 'temp-user';
+      }
+    } else if (!cleanUserId) {
+      cleanUserId = 'temp-user';
+    }
+
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const filePath = `avatars/${cleanUserId}_${Date.now()}.${fileExt}`;
+    const filePath = `${cleanUserId}/avatar_${Date.now()}.${fileExt}`;
 
     if (isSupabaseConfigured()) {
       try {

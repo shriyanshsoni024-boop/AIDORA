@@ -79,7 +79,8 @@ export const CustomerProfilePage: React.FC = () => {
   });
 
   const loadLatestProfile = async () => {
-    const res = await userService.getCurrentUser();
+    const targetUserId = user?.id;
+    const res = await userService.getCurrentUser(targetUserId);
     if (res.success && res.data) {
       setProfile(res.data);
       setEditForm({
@@ -100,7 +101,7 @@ export const CustomerProfilePage: React.FC = () => {
 
   useEffect(() => {
     loadLatestProfile();
-  }, [user]);
+  }, [user?.id]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,6 +120,7 @@ export const CustomerProfilePage: React.FC = () => {
           profileImage: photoUrl,
           avatar: photoUrl,
         });
+        await refreshSession();
         setStatusMessage('Profile photo updated successfully.');
         setTimeout(() => setStatusMessage(''), 3000);
       } else {
@@ -159,39 +161,42 @@ export const CustomerProfilePage: React.FC = () => {
     if (res.success) {
       setStatusMessage('Profile updated successfully.');
       setTimeout(() => setStatusMessage(''), 3000);
-      refreshSession();
+      await refreshSession();
     }
   };
 
   const handleSaveAddress = async (newAddr: Omit<SavedAddress, 'id'>) => {
     if (editingAddress) {
       const updated = { ...editingAddress, ...newAddr };
-      const res = await userService.updateSavedAddress(updated);
+      const res = await userService.updateSavedAddress(updated, profile.id);
       if (res.success && res.data) {
         setProfile((prev) => ({ ...prev, savedAddresses: res.data }));
       }
       setEditingAddress(null);
     } else {
-      const res = await userService.addSavedAddress(newAddr);
+      const res = await userService.addSavedAddress(newAddr, profile.id);
       if (res.success && res.data) {
         setProfile((prev) => ({ ...prev, savedAddresses: res.data }));
       }
     }
+    await refreshSession();
     setShowAddressModal(false);
   };
 
   const handleDeleteAddress = async (addrId: string) => {
-    const res = await userService.deleteSavedAddress(addrId);
+    const res = await userService.deleteSavedAddress(addrId, profile.id);
     if (res.success && res.data) {
       setProfile((prev) => ({ ...prev, savedAddresses: res.data }));
     }
+    await refreshSession();
   };
 
   const handleSetDefaultAddress = async (addrId: string) => {
-    const res = await userService.setDefaultSavedAddress(addrId);
+    const res = await userService.setDefaultSavedAddress(addrId, profile.id);
     if (res.success && res.data) {
       setProfile((prev) => ({ ...prev, savedAddresses: res.data }));
     }
+    await refreshSession();
   };
 
   return (

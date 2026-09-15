@@ -2,20 +2,7 @@ import { STORAGE_KEYS, CURRENT_SCHEMA_VERSION } from './storageKeys';
 import { INITIAL_BOOKINGS, MOCK_REVIEWS } from '../../data/mockData';
 import { MOCK_WORKERS } from '../../data/workers';
 import { TRAINING_MODULES, INITIAL_SKILLS_MATRIX, MOCK_EARNINGS_HISTORY } from '../../data/workerTrainingData';
-import { WorkerCertificate, User, KycItem } from '../../types';
-
-
-const DEFAULT_USER: User = {
-  id: '',
-  name: 'User',
-  phone: '',
-  email: '',
-  role: 'customer',
-  address: '',
-  city: 'Bangalore',
-  profileImage: '',
-  createdAt: new Date().toISOString(),
-};
+import { WorkerCertificate, KycItem } from '../../types';
 
 const DEFAULT_CERTIFICATES: WorkerCertificate[] = [
   {
@@ -93,12 +80,12 @@ class StorageService {
         if (!localStorage.getItem(STORAGE_KEYS.REVIEWS)) {
           this.setItem(STORAGE_KEYS.REVIEWS, MOCK_REVIEWS);
         }
-        if (!localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) {
-          this.setItem(STORAGE_KEYS.CURRENT_USER, DEFAULT_USER);
-        }
         if (!localStorage.getItem(STORAGE_KEYS.KYC_QUEUE)) {
           this.setItem(STORAGE_KEYS.KYC_QUEUE, DEFAULT_KYC_QUEUE);
         }
+
+        // Clean up any legacy shared current user key to prevent cross-profile bleeding
+        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 
         localStorage.setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
       }
@@ -163,8 +150,8 @@ class StorageService {
       this.setItem(STORAGE_KEYS.SKILLS_MATRIX, INITIAL_SKILLS_MATRIX);
       this.setItem(STORAGE_KEYS.CERTIFICATES, DEFAULT_CERTIFICATES);
       this.setItem(STORAGE_KEYS.REVIEWS, MOCK_REVIEWS);
-      this.setItem(STORAGE_KEYS.CURRENT_USER, DEFAULT_USER);
       this.setItem(STORAGE_KEYS.KYC_QUEUE, DEFAULT_KYC_QUEUE);
+      this.removeItem(STORAGE_KEYS.CURRENT_USER);
       localStorage.setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     } catch (e) {
       console.error('StorageService: Reset failed:', e);
@@ -173,3 +160,4 @@ class StorageService {
 }
 
 export const storageService = new StorageService();
+

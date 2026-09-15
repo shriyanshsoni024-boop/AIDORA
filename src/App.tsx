@@ -14,19 +14,22 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { getThemeCssVariables } from './styles/themes';
 import { Logo } from './components/common/Logo';
 
+import { ResourcesPage } from './pages/public/ResourcesPage';
+
 const AppRouter: React.FC = () => {
   const { session, currentRole, currentPath, isLoading } = useAuth();
 
   const themeKey = currentRole === 'admin' ? 'cooperative' : currentRole;
   const themeVariables = getThemeCssVariables(themeKey);
 
-  // Check if we are on a standalone public login page
-  const isLoginPage =
+  // Check if we are on a standalone public page or login page
+  const isStandalonePage =
     currentPath === '/customer/login' ||
     currentPath === '/customer/signup' ||
     currentPath === '/worker/login' ||
     currentPath === '/worker/signup' ||
     currentPath === '/admin/login' ||
+    currentPath === '/resources' ||
     (!session.isAuthenticated && currentPath === '/');
 
   // Loading state during initial Supabase session verification
@@ -56,6 +59,11 @@ const AppRouter: React.FC = () => {
   }
 
   const renderCurrentView = () => {
+    // 0. Public Project Resources Route
+    if (currentPath === '/resources') {
+      return <ResourcesPage />;
+    }
+
     // 1. Standalone Login Routes & Unauthenticated Root
     if (currentPath === '/customer/login' || currentPath === '/customer/signup') {
       return <CustomerLoginPage />;
@@ -136,8 +144,8 @@ const AppRouter: React.FC = () => {
       }}
       className="theme-transition"
     >
-      {/* Contextual Top Announcement Banner (Hidden on clean login screens) */}
-      {!isLoginPage && session.isAuthenticated && <TopAnnouncementBanner currentRole={themeKey} />}
+      {/* Contextual Top Announcement Banner (Hidden on clean login/resources screens) */}
+      {!isStandalonePage && session.isAuthenticated && <TopAnnouncementBanner currentRole={themeKey} />}
 
       {/* Main Container */}
       <div

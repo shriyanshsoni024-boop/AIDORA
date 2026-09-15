@@ -1,0 +1,343 @@
+/**
+ * AIDORA — Project Resources Page Stylesheet
+ * Faithfully adapted from Project resources/styles.css with clean scoping and responsive layout.
+ */
+
+.resources-page-root {
+  min-height: 100vh;
+  width: 100%;
+  background: radial-gradient(circle at 10% 0%, rgba(21, 148, 71, 0.08), transparent 28%),
+              radial-gradient(circle at 90% 15%, rgba(21, 148, 71, 0.05), transparent 24%),
+              #f5f7f5;
+  color: #17251e;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  padding: 34px 22px 44px;
+  box-sizing: border-box;
+}
+
+.resources-container {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.resources-topbar {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(23, 37, 30, 0.09);
+}
+
+.resources-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #17251e;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.resources-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.resources-topbar-label {
+  color: #77837c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.resources-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5ebe7;
+  background: #ffffff;
+  color: #0d7135;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.resources-back-btn:hover {
+  background: #f0fbf4;
+  border-color: #cde6d5;
+}
+
+.resources-hero {
+  max-width: 720px;
+  padding: 76px 0 46px;
+}
+
+.resources-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: #0d7135;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.resources-eyebrow::before {
+  content: "";
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: #159447;
+}
+
+.resources-hero h1 {
+  font-size: clamp(42px, 6vw, 68px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+  font-weight: 800;
+  color: #17251e;
+  margin: 0;
+}
+
+.resources-intro {
+  max-width: 650px;
+  margin-top: 20px;
+  color: #69766f;
+  font-size: 17px;
+  line-height: 1.7;
+  margin-bottom: 0;
+}
+
+.resources-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.resources-card {
+  min-height: 245px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #e5ebe7;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 30px rgba(24, 40, 31, 0.035);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.resources-card:hover:not(.disabled) {
+  transform: translateY(-4px);
+  border-color: #cddbd2;
+  box-shadow: 0 18px 42px rgba(24, 40, 31, 0.09);
+}
+
+.resources-card.featured {
+  background: linear-gradient(145deg, #f0fbf4 0%, #ffffff 70%);
+  border-color: #cde6d5;
+}
+
+.resources-card.disabled {
+  cursor: default;
+}
+
+.resources-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.resources-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #e9f7ed;
+  color: #0d7135;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.resources-tag {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #dff3e5;
+  color: #0d7135;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.resources-tag.neutral {
+  background: #f0f3f1;
+  color: #68746d;
+}
+
+.resources-card h2 {
+  margin-top: 28px;
+  margin-bottom: 0;
+  font-size: 23px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  color: #17251e;
+}
+
+.resources-card p {
+  max-width: 450px;
+  margin-top: 9px;
+  margin-bottom: 0;
+  color: #69766f;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.resources-card-link {
+  margin-top: 24px;
+  color: #0d7135;
+  font-size: 13px;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.resources-card-link b {
+  display: inline-block;
+  margin-left: 2px;
+  transition: transform 0.16s ease;
+}
+
+.resources-card:hover:not(.disabled) .resources-card-link b {
+  transform: translateX(4px);
+}
+
+.resources-card-link.muted {
+  color: #8a958f;
+  font-weight: 600;
+}
+
+.resources-footer {
+  margin-top: 44px;
+  padding: 22px 2px 0;
+  border-top: 1px solid rgba(23, 37, 30, 0.09);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.resources-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resources-footer-left strong {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #17251e;
+}
+
+.resources-footer-left span {
+  color: #7c8781;
+  font-size: 12px;
+}
+
+.resources-footer-right {
+  color: #0d7135;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.resources-footer-right:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+  .resources-page-root {
+    padding: 24px 18px 36px;
+  }
+  .resources-hero {
+    padding: 60px 0 36px;
+  }
+  .resources-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .resources-page-root {
+    padding: 18px 15px 30px;
+  }
+  .resources-topbar {
+    height: 50px;
+  }
+  .resources-topbar-label {
+    font-size: 12px;
+  }
+  .resources-hero {
+    padding: 58px 0 34px;
+  }
+  .resources-hero h1 {
+    font-size: 44px;
+  }
+  .resources-intro {
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .resources-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .resources-card {
+    min-height: 220px;
+    padding: 21px;
+    border-radius: 17px;
+  }
+  .resources-card h2 {
+    margin-top: 23px;
+    font-size: 21px;
+  }
+  .resources-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .resources-footer-left {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 412px) {
+  .resources-hero h1 {
+    font-size: 38px;
+  }
+  .resources-card {
+    padding: 18px;
+  }
+  .resources-card h2 {
+    font-size: 20px;
+  }
+}

@@ -70,8 +70,17 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     phone TEXT NOT NULL,
     email TEXT,
     avatar_url TEXT,
+    dob TEXT,
+    gender TEXT,
     address TEXT NOT NULL DEFAULT '',
+    locality TEXT,
     city TEXT NOT NULL DEFAULT 'Bangalore',
+    state TEXT NOT NULL DEFAULT 'Karnataka',
+    pincode TEXT,
+    preferred_language TEXT NOT NULL DEFAULT 'en',
+    emergency_contact TEXT,
+    saved_addresses JSONB NOT NULL DEFAULT '[]'::jsonb,
+    is_profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -90,6 +99,19 @@ CREATE TABLE IF NOT EXISTS public.workers (
     name_hi TEXT,
     phone TEXT NOT NULL,
     avatar TEXT,
+    dob TEXT,
+    gender TEXT,
+    email TEXT,
+    address TEXT NOT NULL DEFAULT '',
+    locality TEXT,
+    city TEXT NOT NULL DEFAULT 'Bangalore',
+    state TEXT NOT NULL DEFAULT 'Karnataka',
+    pincode TEXT,
+    service_radius_km INT NOT NULL DEFAULT 10,
+    languages TEXT[] NOT NULL DEFAULT '{"English", "Hindi"}',
+    bio TEXT NOT NULL DEFAULT '',
+    work_experience TEXT NOT NULL DEFAULT '',
+    is_profile_completed BOOLEAN NOT NULL DEFAULT FALSE,
     trade TEXT NOT NULL,
     professions TEXT[] NOT NULL DEFAULT '{}',
     skills TEXT[] NOT NULL DEFAULT '{}',
@@ -531,6 +553,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE public.payments; EXCEP
 -- 7. STORAGE BUCKETS SETUP
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES 
+    ('profile-photos', 'profile-photos', TRUE, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']),
     ('kyc-documents', 'kyc-documents', FALSE, 52428800, ARRAY['application/pdf', 'image/jpeg', 'image/png', 'image/webp']),
     ('avatars', 'avatars', TRUE, 10485760, ARRAY['image/jpeg', 'image/png', 'image/webp']),
     ('service-photos', 'service-photos', TRUE, 20971520, ARRAY['image/jpeg', 'image/png', 'image/webp']),
@@ -540,3 +563,36 @@ ON CONFLICT (id) DO UPDATE SET
     public = EXCLUDED.public,
     file_size_limit = EXCLUDED.file_size_limit,
     allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- Storage RLS Policies for profile-photos (Public Read, Owner/Admin Write)
+DROP POLICY IF EXISTS "Public can view profile photos" ON storage.objects;
+CREATE POLICY "Public can view profile photos" ON storage.objects FOR SELECT USING (bucket_id = 'profile-photos');
+
+DROP POLICY IF EXISTS "Authenticated users can upload profile photos" ON storage.objects;
+CREATE POLICY "Authenticated users can upload profile photos" ON storage.objects FOR INSERT TO authenticated WITH CHECK (
+    bucket_id = 'profile-photos' AND (
+        (storage.foldername(name))[1] = auth.uid()::text
+        OR public.is_admin_or_cooperative()
+    )
+);
+
+DROP POLICY IF EXISTS "Users can update own profile photos" ON storage.objects;
+CREATE POLICY "Users can update own profile photos" ON storage.objects FOR UPDATE TO authenticated USING (
+    bucket_id = 'profile-photos' AND (
+        (storage.foldername(name))[1] = auth.uid()::text
+        OR public.is_admin_or_cooperative()
+    )
+) WITH CHECK (
+    bucket_id = 'profile-photos' AND (
+        (storage.foldername(name))[1] = auth.uid()::text
+        OR public.is_admin_or_cooperative()
+    )
+);
+
+DROP POLICY IF EXISTS "Users can delete own profile photos" ON storage.objects;
+CREATE POLICY "Users can delete own profile photos" ON storage.objects FOR DELETE TO authenticated USING (
+    bucket_id = 'profile-photos' AND (
+        (storage.foldername(name))[1] = auth.uid()::text
+        OR public.is_admin_or_cooperative()
+    )
+);

@@ -1,9 +1,10 @@
 import { User, Review, ApiResponse, SavedAddress } from '../types';
-import { STORAGE_KEYS } from './storage/storageKeys';
+import { STORAGE_KEYS, getUserProfileStorageKey } from './storage/storageKeys';
 import { storageService } from './storage/storageService';
 import { MOCK_REVIEWS } from '../data/mockData';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { Database } from '../types/database';
+import { AuthSession } from '../types/auth';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'] & {
   dob?: string | null;
@@ -18,10 +19,10 @@ type ProfileRow = Database['public']['Tables']['profiles']['Row'] & {
 };
 type ReviewRow = Database['public']['Tables']['reviews']['Row'];
 
-const DEFAULT_USER: User = {
-  id: '',
-  name: 'Customer',
-  phone: '',
+const createEmptyUserForId = (userId: string, phone: string = ''): User => ({
+  id: userId,
+  name: '',
+  phone: phone,
   email: '',
   role: 'customer',
   address: '',
@@ -34,14 +35,14 @@ const DEFAULT_USER: User = {
   isProfileCompleted: false,
   profileImage: '',
   createdAt: new Date().toISOString(),
-};
+});
 
 const mapProfileToUser = (row: ProfileRow): User => {
   const roleVal = row.role === 'cooperative' ? 'admin' : (row.role as User['role']);
   return {
     id: row.id,
-    name: row.name,
-    phone: row.phone,
+    name: row.name || '',
+    phone: row.phone || '',
     email: row.email || undefined,
     role: roleVal,
     address: row.address || '',
@@ -64,100 +65,137 @@ const mapProfileToUser = (row: ProfileRow): User => {
 
 class UserService {
   /**
-   * Get current authenticated user profile from Supabase (or cached local storage)
+   * Resolve currently active user ID from Supabase session or cached auth session
    */
-  public async getCurrentUser(): Promise<ApiResponse<User>> {
+  private async resolveActiveUserId(explicitId?: string): Promise<{ userId: string | null; phone: string }> {
+    if (explicitId) return { userId: explicitId, phone: '' };
+
     if (isSupabaseConfigured()) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
+        if (session?.user?.id) {
+          return { userId: session.user.id, phone: session.user.phone || '' };
+        }
+      } catch (err) {
+        console.warn('UserService: Failed to get active session from Supabase:', err);
+      }
+    }
 
-        if (userId) {
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+    const cachedSession = storageService.getItem<AuthSession | null>(STORAGE_KEYS.AUTH_SESSION, null);
+    if (cachedSession?.isAuthenticated && cachedSession?.user?.id) {
+      return { userId: cachedSession.user.id, phone: cachedSession.user.phone || '' };
+    }
 
-          if (data && !error) {
-            const user = mapProfileToUser(data as unknown as ProfileRow);
-            storageService.setItem(STORAGE_KEYS.CURRENT_USER, user);
-            return { success: true, data: user };
-          }
+    return { userId: null, phone: '' };
+  }
+
+  /**
+   * Get authenticated user profile from Supabase (or user-scoped cached local storage)
+   */
+  public async getCurrentUser(targetUserId?: string): Promise<ApiResponse<User>> {
+    const { userId, phone } = await this.resolveActiveUserId(targetUserId);
+
+    if (!userId) {
+      return { success: false, error: 'No authenticated user session found.' };
+    }
+
+    const userStorageKey = getUserProfileStorageKey(userId);
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (data && !error) {
+          const user = mapProfileToUser(data as unknown as ProfileRow);
+          storageService.setItem(userStorageKey, user);
+          return { success: true, data: user };
         }
       } catch (err: unknown) {
-        console.warn('Supabase getCurrentUser failed, falling back to cached profile:', err);
+        console.warn(`UserService: Supabase getCurrentUser failed for ${userId}:`, err);
       }
     }
 
     try {
-      const user = storageService.getItem<User>(STORAGE_KEYS.CURRENT_USER, DEFAULT_USER);
-      return { success: true, data: user };
+      const cached = storageService.getItem<User | null>(userStorageKey, null);
+      if (cached && cached.id === userId) {
+        return { success: true, data: cached };
+      }
+
+      // Return a clean, isolated profile for this specific user ID
+      const newUser = createEmptyUserForId(userId, phone);
+      storageService.setItem(userStorageKey, newUser);
+      return { success: true, data: newUser };
     } catch (err) {
       return { success: false, error: 'Failed to retrieve current user' };
     }
   }
 
   /**
-   * Update user profile data in Supabase & local cache
+   * Update user profile data in Supabase & user-scoped local cache
    */
   public async updateUserProfile(updates: Partial<User>): Promise<ApiResponse<User>> {
-    let targetUserId = updates.id;
+    const { userId, phone } = await this.resolveActiveUserId(updates.id);
+
+    if (!userId) {
+      return { success: false, error: 'Cannot update profile without an active user ID.' };
+    }
+
+    const userStorageKey = getUserProfileStorageKey(userId);
 
     if (isSupabaseConfigured()) {
       try {
-        if (!targetUserId) {
-          const { data: { session } } = await supabase.auth.getSession();
-          targetUserId = session?.user?.id;
-        }
+        const dbUpdates: Record<string, any> = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+        if (updates.email !== undefined) dbUpdates.email = updates.email;
+        if (updates.address !== undefined) dbUpdates.address = updates.address;
+        if (updates.locality !== undefined) dbUpdates.locality = updates.locality;
+        if (updates.city !== undefined) dbUpdates.city = updates.city;
+        if (updates.state !== undefined) dbUpdates.state = updates.state;
+        if (updates.pincode !== undefined) dbUpdates.pincode = updates.pincode;
+        if (updates.dob !== undefined) dbUpdates.dob = updates.dob;
+        if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
+        if (updates.preferredLanguage !== undefined) dbUpdates.preferred_language = updates.preferredLanguage;
+        if (updates.emergencyContact !== undefined) dbUpdates.emergency_contact = updates.emergencyContact;
+        if (updates.savedAddresses !== undefined) dbUpdates.saved_addresses = updates.savedAddresses;
+        if (updates.isProfileCompleted !== undefined) dbUpdates.is_profile_completed = updates.isProfileCompleted;
+        if (updates.profileImage !== undefined) dbUpdates.avatar_url = updates.profileImage;
+        if (updates.avatar !== undefined) dbUpdates.avatar_url = updates.avatar;
 
-        if (targetUserId) {
-          const dbUpdates: Record<string, any> = {};
-          if (updates.name !== undefined) dbUpdates.name = updates.name;
-          if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
-          if (updates.email !== undefined) dbUpdates.email = updates.email;
-          if (updates.address !== undefined) dbUpdates.address = updates.address;
-          if (updates.locality !== undefined) dbUpdates.locality = updates.locality;
-          if (updates.city !== undefined) dbUpdates.city = updates.city;
-          if (updates.state !== undefined) dbUpdates.state = updates.state;
-          if (updates.pincode !== undefined) dbUpdates.pincode = updates.pincode;
-          if (updates.dob !== undefined) dbUpdates.dob = updates.dob;
-          if (updates.gender !== undefined) dbUpdates.gender = updates.gender;
-          if (updates.preferredLanguage !== undefined) dbUpdates.preferred_language = updates.preferredLanguage;
-          if (updates.emergencyContact !== undefined) dbUpdates.emergency_contact = updates.emergencyContact;
-          if (updates.savedAddresses !== undefined) dbUpdates.saved_addresses = updates.savedAddresses;
-          if (updates.isProfileCompleted !== undefined) dbUpdates.is_profile_completed = updates.isProfileCompleted;
-          if (updates.profileImage !== undefined) dbUpdates.avatar_url = updates.profileImage;
-          if (updates.avatar !== undefined) dbUpdates.avatar_url = updates.avatar;
+        const { data, error } = await supabase
+          .from('profiles')
+          .update(dbUpdates as any)
+          .eq('id', userId)
+          .select()
+          .maybeSingle();
 
-          const { data, error } = await supabase
-            .from('profiles')
-            .update(dbUpdates as any)
-            .eq('id', targetUserId)
-            .select()
-            .maybeSingle();
-
-          if (error) {
-            console.warn('Supabase updateUserProfile error:', error.message);
-          } else if (data) {
-            const updated = mapProfileToUser(data as unknown as ProfileRow);
-            storageService.setItem(STORAGE_KEYS.CURRENT_USER, updated);
-            return { success: true, data: updated, message: 'User profile updated successfully.' };
-          }
+        if (error) {
+          console.warn('Supabase updateUserProfile error:', error.message);
+        } else if (data) {
+          const updated = mapProfileToUser(data as unknown as ProfileRow);
+          storageService.setItem(userStorageKey, updated);
+          this.syncAuthSessionUser(updated);
+          return { success: true, data: updated, message: 'User profile updated successfully.' };
         }
       } catch (err: unknown) {
-        console.warn('Supabase updateUserProfile failed, falling back to local:', err);
+        console.warn('Supabase updateUserProfile exception:', err);
       }
     }
 
     try {
-      const current = storageService.getItem<User>(STORAGE_KEYS.CURRENT_USER, DEFAULT_USER);
+      const current = storageService.getItem<User>(userStorageKey, createEmptyUserForId(userId, phone));
       const updated: User = {
         ...current,
         ...updates,
+        id: userId,
         updatedAt: new Date().toISOString(),
       };
-      storageService.setItem(STORAGE_KEYS.CURRENT_USER, updated);
+      storageService.setItem(userStorageKey, updated);
+      this.syncAuthSessionUser(updated);
       return { success: true, data: updated, message: 'User profile updated successfully.' };
     } catch (err) {
       return { success: false, error: 'Failed to update user profile' };
@@ -165,12 +203,45 @@ class UserService {
   }
 
   /**
+   * Helper: Synchronize user updates into active AuthSession in local storage
+   */
+  private syncAuthSessionUser(updatedUser: User): void {
+    const session = storageService.getItem<AuthSession | null>(STORAGE_KEYS.AUTH_SESSION, null);
+    if (session?.user && session.user.id === updatedUser.id) {
+      const authUser = {
+        ...session.user,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        email: updatedUser.email,
+        address: updatedUser.address,
+        locality: updatedUser.locality,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        pincode: updatedUser.pincode,
+        dob: updatedUser.dob,
+        gender: updatedUser.gender,
+        preferredLanguage: updatedUser.preferredLanguage,
+        emergencyContact: updatedUser.emergencyContact,
+        savedAddresses: updatedUser.savedAddresses,
+        isProfileCompleted: updatedUser.isProfileCompleted,
+        avatar: updatedUser.profileImage || updatedUser.avatar,
+        profileImage: updatedUser.profileImage || updatedUser.avatar,
+      };
+      storageService.setItem(STORAGE_KEYS.AUTH_SESSION, { ...session, user: authUser });
+    }
+  }
+
+  /**
    * Save a new address to the user's profile
    */
   public async addSavedAddress(newAddr: Omit<SavedAddress, 'id'>, userId?: string): Promise<ApiResponse<SavedAddress[]>> {
-    const userRes = await this.getCurrentUser();
-    const currentUser = userRes.data || DEFAULT_USER;
-    const targetId = userId || currentUser.id;
+    const userRes = await this.getCurrentUser(userId);
+    if (!userRes.success || !userRes.data) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const currentUser = userRes.data;
+    const targetId = currentUser.id;
 
     const addressItem: SavedAddress = {
       id: `addr-${Date.now()}`,
@@ -204,9 +275,13 @@ class UserService {
    * Update an existing saved address
    */
   public async updateSavedAddress(updatedAddr: SavedAddress, userId?: string): Promise<ApiResponse<SavedAddress[]>> {
-    const userRes = await this.getCurrentUser();
-    const currentUser = userRes.data || DEFAULT_USER;
-    const targetId = userId || currentUser.id;
+    const userRes = await this.getCurrentUser(userId);
+    if (!userRes.success || !userRes.data) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const currentUser = userRes.data;
+    const targetId = currentUser.id;
 
     let updatedList = (currentUser.savedAddresses || []).map((addr) => {
       if (addr.id === updatedAddr.id) {
@@ -235,9 +310,13 @@ class UserService {
    * Delete a saved address
    */
   public async deleteSavedAddress(addressId: string, userId?: string): Promise<ApiResponse<SavedAddress[]>> {
-    const userRes = await this.getCurrentUser();
-    const currentUser = userRes.data || DEFAULT_USER;
-    const targetId = userId || currentUser.id;
+    const userRes = await this.getCurrentUser(userId);
+    if (!userRes.success || !userRes.data) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const currentUser = userRes.data;
+    const targetId = currentUser.id;
 
     const filtered = (currentUser.savedAddresses || []).filter((addr) => addr.id !== addressId);
     if (filtered.length > 0 && !filtered.some((a) => a.isDefault)) {
@@ -259,9 +338,13 @@ class UserService {
    * Set an address as default
    */
   public async setDefaultSavedAddress(addressId: string, userId?: string): Promise<ApiResponse<SavedAddress[]>> {
-    const userRes = await this.getCurrentUser();
-    const currentUser = userRes.data || DEFAULT_USER;
-    const targetId = userId || currentUser.id;
+    const userRes = await this.getCurrentUser(userId);
+    if (!userRes.success || !userRes.data) {
+      return { success: false, error: 'User not found' };
+    }
+
+    const currentUser = userRes.data;
+    const targetId = currentUser.id;
 
     let selectedAddr: SavedAddress | undefined;
     const updatedList = (currentUser.savedAddresses || []).map((addr) => {
@@ -324,3 +407,4 @@ class UserService {
 }
 
 export const userService = new UserService();
+

@@ -13,7 +13,7 @@ import {
 import { Role } from '../../types';
 import { supabase, isSupabaseConfigured, formatIndianPhoneToE164, isValidIndianMobile } from '../../lib/supabase';
 import { storageService } from '../storage/storageService';
-import { STORAGE_KEYS } from '../storage/storageKeys';
+import { STORAGE_KEYS, getUserProfileStorageKey } from '../storage/storageKeys';
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 Days default fallback expiry
 
@@ -59,7 +59,8 @@ class AuthApiClient {
 
     const formattedPhone = formatIndianPhoneToE164(cleanPhone);
     const userRole: Role = (dto.role === 'worker' ? 'worker' : 'customer') as Role;
-    const defaultName = dto.name?.trim() || (userRole === 'worker' ? 'Artisan Partner' : 'AIDORA Customer');
+    const providedName = dto.name?.trim() || '';
+    const defaultName = providedName || (userRole === 'worker' ? 'Artisan Partner' : '');
 
     const bridgeEmail = `user_${cleanPhone}@phone.aidora.app`;
     const bridgePassword = `Aidora@${cleanPhone}!2026`;
@@ -71,6 +72,13 @@ class AuthApiClient {
       let expiresAtMs: number = Date.now() + SESSION_DURATION_MS;
 
       if (isSupabaseConfigured()) {
+        // Pre-clear any prior active session on client to prevent identity cross-contamination
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          // Ignore signout cleanup warning
+        }
+
         // Attempt Sign In first
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: bridgeEmail,
@@ -127,9 +135,9 @@ class AuthApiClient {
         }
       }
 
-      // If Supabase not reachable or local mode fallback UUID
+      // If Supabase not reachable or standalone offline mode:
+      // Produce a deterministic unique UUID strictly derived from this phone number
       if (!authUserId) {
-        // Deterministic stable UUID based on clean phone number
         const hex = cleanPhone.padStart(12, '0').slice(-12);
         authUserId = `00000000-0000-4000-8000-${hex}`;
       }
@@ -141,12 +149,13 @@ class AuthApiClient {
         phone: formattedPhone,
         email: dto.email?.trim() || `${cleanPhone}@aidora.app`,
         city: dto.locality?.trim() || 'Bangalore',
+        isProfileCompleted: userRole === 'worker' ? false : (providedName ? true : false),
       });
 
       let workerRecord: any = null;
       if (userRole === 'worker') {
         workerRecord = await this.ensureWorkerProfile(authUserId, {
-          name: profile.name,
+          name: profile.name || defaultName || 'Artisan Partner',
           phone: formattedPhone,
           professions: dto.profession ? [dto.profession] : ['Electrician'],
           skills: dto.skills || (dto.profession ? [dto.profession] : ['General Repairs']),
@@ -157,9 +166,15 @@ class AuthApiClient {
         });
       }
 
+      const isProfileCompleted = profile.is_profile_completed ?? (
+        userRole === 'worker'
+          ? (workerRecord?.is_profile_completed ?? false)
+          : Boolean(profile.name && profile.name.trim().length > 0 && profile.address)
+      );
+
       const authUser: AuthUser = {
         id: authUserId,
-        name: profile.name || defaultName,
+        name: profile.name || '',
         phone: cleanPhone,
         email: profile.email || dto.email?.trim() || undefined,
         role: userRole,
@@ -175,7 +190,7 @@ class AuthApiClient {
         preferredLanguage: profile.preferred_language || 'en',
         emergencyContact: profile.emergency_contact || undefined,
         savedAddresses: Array.isArray(profile.saved_addresses) ? profile.saved_addresses : [],
-        isProfileCompleted: profile.is_profile_completed ?? false,
+        isProfileCompleted,
         zone: workerRecord?.zone || dto.locality?.trim() || 'Indiranagar & East Zone',
         profession: workerRecord?.trade || dto.profession || (userRole === 'worker' ? 'Electrician' : undefined),
         professions: workerRecord?.professions || (dto.profession ? [dto.profession] : ['Electrician']),
@@ -197,17 +212,27 @@ class AuthApiClient {
         expiresAt: expiresAtMs,
       };
 
-      // Persist auth session & current user
+      // Persist auth session & user-scoped profile (aidora_profile_<auth.uid>)
       storageService.setItem(STORAGE_KEYS.AUTH_SESSION, session);
-      storageService.setItem(STORAGE_KEYS.CURRENT_USER, {
+      storageService.setItem(getUserProfileStorageKey(authUserId), {
         id: authUser.id,
         name: authUser.name,
         phone: authUser.phone,
         email: authUser.email,
         role: authUser.role,
         address: authUser.address || '',
+        locality: authUser.locality || '',
         city: authUser.city || 'Bangalore',
+        state: authUser.state || 'Karnataka',
+        pincode: authUser.pincode || '',
+        dob: authUser.dob,
+        gender: authUser.gender,
+        preferredLanguage: authUser.preferredLanguage || 'en',
+        emergencyContact: authUser.emergencyContact,
+        savedAddresses: authUser.savedAddresses || [],
+        isProfileCompleted: authUser.isProfileCompleted,
         profileImage: authUser.avatar,
+        avatar: authUser.avatar,
         createdAt: authUser.createdAt,
       });
 
@@ -267,6 +292,8 @@ class AuthApiClient {
               email,
               role: 'admin',
               city: 'Bangalore',
+              state: 'Karnataka',
+              is_profile_completed: true,
             });
 
           const authUser: AuthUser = {
@@ -278,6 +305,7 @@ class AuthApiClient {
             verificationStatus: 'VERIFIED',
             createdAt: new Date().toISOString(),
             zone: 'Central Federation Hub',
+            isProfileCompleted: true,
           };
 
           const session: AuthSession = {
@@ -290,6 +318,7 @@ class AuthApiClient {
           };
 
           storageService.setItem(STORAGE_KEYS.AUTH_SESSION, session);
+          storageService.setItem(getUserProfileStorageKey(authUser.id), authUser);
           return { success: true, session, user: authUser };
         }
 
@@ -309,6 +338,7 @@ class AuthApiClient {
           verificationStatus: 'VERIFIED',
           createdAt: new Date().toISOString(),
           zone: 'Central Federation Hub',
+          isProfileCompleted: true,
         };
 
         const session: AuthSession = {
@@ -319,6 +349,7 @@ class AuthApiClient {
         };
 
         storageService.setItem(STORAGE_KEYS.AUTH_SESSION, session);
+        storageService.setItem(getUserProfileStorageKey(authUser.id), authUser);
         return { success: true, session, user: authUser };
       }
 
@@ -333,9 +364,31 @@ class AuthApiClient {
    */
   public async fetchOrCreateProfile(
     userId: string,
-    initial: { role: Role; name: string; phone: string; email?: string; city?: string; address?: string }
+    initial: { role: Role; name: string; phone: string; email?: string; city?: string; address?: string; isProfileCompleted?: boolean }
   ): Promise<any> {
-    if (!isSupabaseConfigured()) return initial;
+    const isCompleted = initial.isProfileCompleted ?? Boolean(initial.name && initial.name.trim().length > 0 && initial.address);
+
+    if (!isSupabaseConfigured()) {
+      const userKey = getUserProfileStorageKey(userId);
+      const cached = storageService.getItem<any>(userKey, null);
+      if (cached && cached.id === userId) {
+        return cached;
+      }
+      const fallback = {
+        id: userId,
+        role: initial.role,
+        name: initial.name || '',
+        phone: initial.phone,
+        email: initial.email || null,
+        city: initial.city || 'Bangalore',
+        state: 'Karnataka',
+        address: initial.address || '',
+        saved_addresses: [],
+        is_profile_completed: isCompleted,
+      };
+      storageService.setItem(userKey, fallback);
+      return fallback;
+    }
 
     const { data: existing } = await supabase
       .from('profiles')
@@ -350,18 +403,21 @@ class AuthApiClient {
     const newProfile = {
       id: userId,
       role: initial.role,
-      name: initial.name,
+      name: initial.name || '',
       phone: initial.phone,
       email: initial.email || null,
-      city: initial.city || 'Noida',
+      city: initial.city || 'Bangalore',
+      state: 'Karnataka',
       address: initial.address || '',
+      saved_addresses: [],
+      is_profile_completed: isCompleted,
     };
 
     const { data: created, error } = await supabase
       .from('profiles')
       .insert([newProfile])
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.warn('Profile insert note:', error.message);

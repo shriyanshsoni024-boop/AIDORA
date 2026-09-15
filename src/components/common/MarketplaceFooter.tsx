@@ -107,6 +107,7 @@ export const MarketplaceFooter: React.FC = () => {
               {language === 'hi' ? 'सहकारी संगठन' : 'Cooperative Union'}
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <li><span style={{ cursor: 'pointer', color: '#6EE7B7', fontWeight: 600 }} onClick={() => { if (typeof window !== 'undefined') { window.location.href = '/resources'; } }}>Project Resources ↗</span></li>
               <li><span>About Federation</span></li>
               <li><span>Cooperative Bylaws</span></li>
               <li><span>Worker Welfare Fund</span></li>

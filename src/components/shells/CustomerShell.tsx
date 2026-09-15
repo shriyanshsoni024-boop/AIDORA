@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBooking } from '../../context/BookingContext';
+import { useAuth } from '../../context/AuthContext';
 import { BottomNav } from '../common/BottomNav';
 import { CustomerHomePage } from '../../pages/customer/CustomerHomePage';
 import { ServiceDetailPage } from '../../pages/customer/ServiceDetailPage';
@@ -19,15 +20,31 @@ import { userService } from '../../services/userService';
 
 export const CustomerShell: React.FC = () => {
   const { activeView, selectedLocation, setSelectedLocation } = useBooking();
+  const { user, isAuthenticated, refreshSession } = useAuth();
 
   // Onboarding Step State (null = regular home marketplace)
   const [onboardingStep, setOnboardingStep] = useState<
     'splash' | 'login' | 'otp' | 'personal' | 'location' | 'address' | null
-  >(null);
+  >(() => {
+    // If authenticated customer has not completed their profile, start onboarding
+    if (isAuthenticated && user && user.isProfileCompleted === false) {
+      return 'personal';
+    }
+    return null;
+  });
 
   const [tempPhone, setTempPhone] = useState<string>('');
   const [tempLocation, setTempLocation] = useState<string>(selectedLocation || 'Indiranagar, Bangalore');
   const [showAddressModal, setShowAddressModal] = useState<boolean>(false);
+
+  // Automatically trigger onboarding if user is logged in with incomplete profile
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.isProfileCompleted === false && onboardingStep === null) {
+        setOnboardingStep('personal');
+      }
+    }
+  }, [isAuthenticated, user?.id, user?.isProfileCompleted]);
 
   // 1. Splash Screen Flow
   if (onboardingStep === 'splash') {
@@ -74,9 +91,11 @@ export const CustomerShell: React.FC = () => {
           onConfirm={async (details) => {
             const fullName = `${details.firstName} ${details.lastName}`.trim();
             await userService.updateUserProfile({
+              id: user?.id,
               name: fullName,
               email: details.email || undefined,
             });
+            await refreshSession();
             setOnboardingStep('location');
           }}
           onBack={() => setOnboardingStep(null)}
@@ -122,12 +141,14 @@ export const CustomerShell: React.FC = () => {
               pincode: '560038',
               phone: addr.receiverPhone,
               isDefault: true,
-            });
+            }, user?.id);
             await userService.updateUserProfile({
+              id: user?.id,
               isProfileCompleted: true,
               address: addr.fullAddress,
               locality: addr.locality,
             });
+            await refreshSession();
             setOnboardingStep(null);
           }}
           onBack={() => setOnboardingStep('location')}

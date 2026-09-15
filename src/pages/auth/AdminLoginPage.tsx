@@ -186,6 +186,37 @@ export const AdminLoginPage: React.FC = () => {
                 <span>Customer Login</span>
                 <span style={{ color: '#1DAA5C', fontWeight: 700 }}>→</span>
               </button>
+
+              <div style={{ height: '1px', backgroundColor: '#E2E8F0', margin: '4px 0' }} />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate('/resources');
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: '#0D7135',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  transition: 'background-color 150ms ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F0FDF4')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <span>Project Resources</span>
+                <span style={{ color: '#159447', fontWeight: 700 }}>↗</span>
+              </button>
             </div>
           )}
         </div>

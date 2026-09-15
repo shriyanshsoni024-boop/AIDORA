@@ -132,11 +132,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const loadProfileFromSupabase = async (userId: string, sbToken?: string, refreshTok?: string, expiresAtSec?: number) => {
       try {
-        const { data: profile } = await supabase
+        let { data: profile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
+
+        // If profile row doesn't exist yet, insert a clean baseline record for this auth user
+        if (!profile) {
+          const { data: created } = await supabase
+            .from('profiles')
+            .insert([{
+              id: userId,
+              role: 'customer',
+              name: '',
+              phone: '',
+              city: 'Bangalore',
+              state: 'Karnataka',
+              address: '',
+              saved_addresses: [],
+              is_profile_completed: false,
+            }])
+            .select()
+            .maybeSingle();
+          profile = created;
+        }
 
         if (profile) {
           const userRole: Role = (profile.role === 'cooperative' ? 'admin' : profile.role) as Role;
@@ -151,14 +171,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
 
           const p = profile as any;
+          const isProfileCompleted = p.is_profile_completed ?? (
+            userRole === 'worker'
+              ? (workerData?.is_profile_completed ?? false)
+              : Boolean(profile.name && profile.name.trim().length > 0 && profile.address)
+          );
+
           const authUser: AuthUser = {
             id: profile.id,
-            name: profile.name,
-            phone: profile.phone,
+            name: profile.name || '',
+            phone: profile.phone || '',
             email: profile.email || undefined,
             role: userRole,
             verificationStatus: (workerData?.verification_status || (userRole === 'worker' ? 'PENDING' : 'VERIFIED')) as any,
-            createdAt: profile.created_at,
+            createdAt: profile.created_at || new Date().toISOString(),
             dob: p.dob || undefined,
             gender: p.gender || undefined,
             address: profile.address || '',
@@ -169,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             preferredLanguage: p.preferred_language || 'en',
             emergencyContact: p.emergency_contact || undefined,
             savedAddresses: Array.isArray(p.saved_addresses) ? p.saved_addresses : [],
-            isProfileCompleted: p.is_profile_completed ?? false,
+            isProfileCompleted,
             zone: workerData?.zone || p.locality || profile.city,
             profession: workerData?.trade || workerData?.professions?.[0],
             professions: workerData?.professions || (workerData?.trade ? [workerData.trade] : undefined),
@@ -214,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       } else {
         // If there is an existing valid local demo session, keep it
-        if (cached && cached.isAuthenticated && cached.user) {
+        if (cached && cached.isAuthenticated && cached.user?.id) {
           setSession(cached);
         } else {
           setSession({
@@ -227,7 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       setIsLoading(false);
     }).catch(() => {
-      if (cached && cached.isAuthenticated && cached.user) {
+      if (cached && cached.isAuthenticated && cached.user?.id) {
         setSession(cached);
       }
       setIsLoading(false);
